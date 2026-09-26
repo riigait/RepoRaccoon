@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>findergit</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --text: #1b1f24; --muted: #616a75;
+    --border: #d9dde3; --accent: #2563eb; --accent-text: #ffffff;
+    --chip: #eef1f5; --chip-on: #dbe7ff; --row-hover: #f2f5fa;
+    --danger: #c42b2b; --ok: #1f7a3a; --code: #eef1f5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1216; --panel: #171b21; --text: #e6e9ee; --muted: #9aa3ae;
+      --border: #2a3039; --accent: #4f8cff; --accent-text: #0b0e12;
+      --chip: #20262e; --chip-on: #1e3358; --row-hover: #1c2129;
+      --danger: #ff6b6b; --ok: #4cc27a; --code: #20262e;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 14px/1.45 "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
+  header, main, footer { max-width: 1200px; margin: 0 auto; padding: 0 16px; }
+  header { display: flex; align-items: baseline; gap: 12px; padding-top: 20px; }
+  h1 { font-size: 22px; margin: 0; letter-spacing: -0.02em; }
+  h1 span { color: var(--accent); }
+  .sub { color: var(--muted); }
+  .panel {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px; margin-top: 14px;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .row + .row { margin-top: 10px; }
+  label.field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
+  input[type=text], input[type=number] {
+    background: var(--bg); color: var(--text); border: 1px solid var(--border);
+    border-radius: 6px; padding: 7px 9px; font: inherit; min-width: 0;
+  }
+  input:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .grow { flex: 1 1 220px; }
+  .grow input { width: 100%; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px;
+    background: var(--chip); border: 1px solid var(--border); border-radius: 999px;
+    cursor: pointer; user-select: none; font-size: 13px;
+  }
+  .chip input { margin: 0; }
+  .chip.on { background: var(--chip-on); border-color: var(--accent); }
+  .chip small { color: var(--muted); }
+  button {
+    font: inherit; border-radius: 6px; padding: 7px 14px; cursor: pointer;
+    border: 1px solid var(--border); background: var(--chip); color: var(--text);
+  }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
+  button.danger { color: var(--danger); }
+  button:disabled { opacity: .5; cursor: default; }
+  .status { color: var(--muted); font-size: 13px; }
+  .status.err { color: var(--danger); }
+  .status.ok { color: var(--ok); }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { font-size: 12px; color: var(--muted); font-weight: 600; cursor: pointer; white-space: nowrap; user-select: none; }
+  th.sorted::after { content: " \25B4"; }
+  th.sorted.desc::after { content: " \25BE"; }
+  tbody tr:hover { background: var(--row-hover); }
+  td.name { font-weight: 600; white-space: nowrap; }
+  td.path { font-family: Consolas, "Cascadia Mono", monospace; font-size: 12.5px; word-break: break-all; }
+  .branch { font-family: Consolas, monospace; font-size: 12px; background: var(--code); padding: 1px 6px; border-radius: 4px; white-space: nowrap; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  td.remote { word-break: break-all; font-size: 13px; }
+  td.actions { white-space: nowrap; }
+  td.actions button { padding: 3px 8px; font-size: 12px; }
+  .empty { text-align: center; color: var(--muted); padding: 30px; }
+  footer { display: flex; justify-content: space-between; align-items: center; padding: 16px; color: var(--muted); font-size: 12px; }
+  #toast {
+    position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+    background: var(--text); color: var(--bg); padding: 8px 14px; border-radius: 6px;
+    opacity: 0; transition: opacity .2s; pointer-events: none; max-width: calc(100% - 32px);
+  }
+  #toast.show { opacity: 1; }
+  @media (max-width: 700px) {
+    th.col-mod, td.col-mod, th.col-remote, td.remote { display: none; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>finder<span>git</span></h1>
+  <div class="sub">find your git repositories on this PC</div>
+</header>
+
+<main>
+  <section class="panel" aria-label="Scan options">
+    <div class="row">
+      <div>
+        <div class="sub" style="font-size:12px;margin-bottom:4px">Drives (none selected = all)</div>
+        <div class="chips" id="drives"><span class="status">Loading drives…</span></div>
+      </div>
+    </div>
+    <div class="row">
+      <label class="field grow">Folder (optional)
+        <input type="text" id="path" placeholder="e.g. D:\vs">
+      </label>
+      <label class="field" style="width:130px">Repo name (optional)
+        <input type="text" id="name" placeholder="e.g. api">
+      </label>
+      <label class="field" style="width:110px">Max depth (0 = all)
+        <input type="number" id="depth" min="0" max="100" value="0">
+      </label>
+      <label class="chip" style="align-self:flex-end"><input type="checkbox" id="appdata"> Include AppData</label>
+    </div>
+    <div class="row">
+      <button class="primary" id="scanBtn">Scan</button>
+      <button class="danger" id="stopBtn" disabled>Stop</button>
+      <button id="cacheBtn">Load last full scan</button>
+      <span class="status" id="status" role="status"></span>
+    </div>
+  </section>
+
+  <section class="panel" aria-label="Results">
+    <div class="row" style="margin-bottom:10px">
+      <label class="field grow">Search results
+        <input type="text" id="search" placeholder="Filter by name, path, branch or remote…">
+      </label>
+      <div class="status" id="count" style="align-self:flex-end"></div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th data-key="Name">Name</th>
+            <th data-key="Branch">Branch</th>
+            <th data-key="Remote" class="col-remote">Remote</th>
+            <th data-key="Path">Path</th>
+            <th data-key="Modified" class="col-mod">Modified</th>
+            <th>Open</th>
+          </tr>
+        </thead>
+        <tbody id="rows"><tr><td colspan="6" class="empty">No results yet.</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <span>Runs locally on this PC only · localhost</span>
+  <button id="quitBtn">Stop server</button>
+</footer>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let repos = [];
+let sortKey = 'Path', sortDir = 1;
+let pollTimer = null, scanStart = 0;
+
+async function api(url, method = 'GET', body) {
+  const res = await fetch(url, {
+    method,
+    headers: { 'X-Findergit': '1', 'Content-Type': 'application/json' },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || res.statusText);
+  return data;
+}
+
+// PowerShell 5.1 sometimes wraps arrays as {value:[...]}.
+const asArray = (x) => Array.isArray(x) ? x : (x && Array.isArray(x.value) ? x.value : (x ? [x] : []));
+
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function setStatus(msg, kind = '') {
+  const s = $('status');
+  s.textContent = msg;
+  s.className = 'status' + (kind ? ' ' + kind : '');
+}
+
+// git@github.com:owner/repo.git -> https://github.com/owner/repo
+function webUrl(remote) {
+  if (!remote) return '';
+  let u = remote.replace('***@', '');
+  const ssh = u.match(/^(?:ssh:\/\/)?git@([^:/]+)[:/](.+)$/);
+  if (ssh) u = `https://${ssh[1]}/${ssh[2]}`;
+  u = u.replace(/\.git$/, '');
+  return /^https?:\/\//.test(u) ? u : '';
+}
+
+async function loadDrives() {
+  try {
+    const drives = asArray(await api('/api/drives'));
+    $('drives').innerHTML = drives.map(d => `
+      <label class="chip" title="${esc(d.Type)} · ${esc(d.FreeGB)} GB free of ${esc(d.SizeGB)} GB">
+        <input type="checkbox" value="${esc(d.Letter)}"> ${esc(d.Letter)}:
+        <small>${esc(d.Label || d.Type)}</small>
+      </label>`).join('');
+    $('drives').querySelectorAll('input').forEach(i =>
+      i.addEventListener('change', () => i.parentElement.classList.toggle('on', i.checked)));
+  } catch (e) {
+    $('drives').innerHTML = `<span class="status err">${esc(e.message)}</span>`;
+  }
+}
+
+async function loadCache(quiet) {
+  try {
+    const c = await api('/api/cache');
+    repos = asArray(c.Repos);
+    render();
+    if (c.ScannedAt) setStatus(`Showing last full scan from ${c.ScannedAt}.`);
+    else if (!quiet) setStatus('No cache yet — run a full scan (no drives, folder, name or depth).');
+  } catch (e) { setStatus(e.message, 'err'); }
+}
+
+function render() {
+  const q = $('search').value.trim().toLowerCase();
+  const list = repos
+    .filter(r => !q || [r.Name, r.Path, r.Branch, r.Remote].some(v => String(v || '').toLowerCase().includes(q)))
+    .sort((a, b) => String(a[sortKey] || '').localeCompare(String(b[sortKey] || ''), undefined, { sensitivity: 'base' }) * sortDir);
+
+  document.querySelectorAll('th[data-key]').forEach(th => {
+    th.classList.toggle('sorted', th.dataset.key === sortKey);
+    th.classList.toggle('desc', th.dataset.key === sortKey && sortDir < 0);
+  });
+
+  $('count').textContent = q ? `${list.length} of ${repos.length} repos` : `${repos.length} repos`;
+
+  if (!list.length) {
+    $('rows').innerHTML = `<tr><td colspan="6" class="empty">${repos.length ? 'No matches.' : 'No results yet.'}</td></tr>`;
+    return;
+  }
+  $('rows').innerHTML = list.map(r => {
+    const url = webUrl(r.Remote);
+    const remote = r.Remote ? (url ? `<a href="${esc(url)}" target="_blank" rel="noopener">${esc(r.Remote)}</a>` : esc(r.Remote)) : '<span class="sub">—</span>';
+    return `<tr>
+      <td class="name">${esc(r.Name)}</td>
+      <td>${r.Branch ? `<span class="branch">${esc(r.Branch)}</span>` : ''}</td>
+      <td class="remote">${remote}</td>
+      <td class="path">${esc(r.Path)}</td>
+      <td class="col-mod sub">${esc(r.Modified)}</td>
+      <td class="actions" data-path="${esc(r.Path)}">
+        <button data-app="explorer" title="Open in File Explorer">Folder</button>
+        <button data-app="code" title="Open in VS Code">Code</button>
+        <button data-app="terminal" title="Open terminal here">Term</button>
+        <button data-app="copy" title="Copy path">Copy</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// Clipboard API can be blocked; fall back to the old textarea + execCommand way.
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); return true; } catch { }
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.setAttribute('readonly', '');
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch { }
+  ta.remove();
+  return ok;
+}
+
+async function onAction(e) {
+  const btn = e.target.closest('button[data-app]');
+  if (!btn) return;
+  const path = btn.parentElement.dataset.path;
+  const app = btn.dataset.app;
+  if (app === 'copy') {
+    toast(await copyText(path) ? 'Path copied' : 'Copy failed');
+    return;
+  }
+  try { await api('/api/open', 'POST', { path, app }); toast(`Opened in ${btn.textContent}`); }
+  catch (err) { toast(err.message); }
+}
+
+function setScanning(on) {
+  $('scanBtn').disabled = on;
+  $('cacheBtn').disabled = on;
+  $('stopBtn').disabled = !on;
+}
+
+async function startScan() {
+  const drives = [...$('drives').querySelectorAll('input:checked')].map(i => i.value);
+  const body = {
+    drives,
+    path: $('path').value.trim(),
+    name: $('name').value.trim(),
+    depth: parseInt($('depth').value, 10) || 0,
+    appdata: $('appdata').checked,
+  };
+  try {
+    await api('/api/scan', 'POST', body);
+  } catch (e) { setStatus(e.message, 'err'); return; }
+  const where = body.path || (drives.length ? drives.map(d => d + ':').join(', ') : 'all drives');
+  watchScan(where, Date.now());
+}
+
+function watchScan(where, start) {
+  setScanning(true);
+  scanStart = start;
+  setStatus(`Scanning ${where}…`);
+  clearInterval(pollTimer);
+  pollTimer = setInterval(() => pollScan(where), 1000);
+}
+
+// After a page reload, pick up a scan that is still running on the server.
+async function resumeScan() {
+  try {
+    const s = await api('/api/scan');
+    if (s.running) watchScan('(in progress)', Date.parse(s.startedAt) || Date.now());
+  } catch { }
+}
+
+async function pollScan(where) {
+  let s;
+  try { s = await api('/api/scan'); }
+  catch (e) { clearInterval(pollTimer); setScanning(false); setStatus(e.message, 'err'); return; }
+  const secs = Math.round((Date.now() - scanStart) / 1000);
+  if (s.running) { setStatus(`Scanning ${where}… ${secs}s`); return; }
+  clearInterval(pollTimer);
+  setScanning(false);
+  if (s.error) { setStatus(s.error, 'err'); return; }
+  repos = asArray(s.results);
+  render();
+  setStatus(`Found ${repos.length} repos in ${secs}s.`, 'ok');
+}
+
+async function stopScan() {
+  try { await api('/api/scan/stop', 'POST'); } catch (e) { setStatus(e.message, 'err'); }
+}
+
+async function quit() {
+  if (!confirm('Stop the findergit server? This page will stop working.')) return;
+  try { await api('/api/quit', 'POST'); } catch { /* server already gone */ }
+  document.body.innerHTML = '<main><div class="panel" style="margin-top:40px">findergit server stopped. Run <b>findergit -w</b> to start it again.</div></main>';
+}
+
+document.querySelectorAll('th[data-key]').forEach(th => th.addEventListener('click', () => {
+  if (sortKey === th.dataset.key) sortDir = -sortDir; else { sortKey = th.dataset.key; sortDir = 1; }
+  render();
+}));
+$('rows').addEventListener('click', onAction);
+$('search').addEventListener('input', render);
+$('scanBtn').addEventListener('click', startScan);
+$('stopBtn').addEventListener('click', stopScan);
+$('cacheBtn').addEventListener('click', () => loadCache(false));
+$('quitBtn').addEventListener('click', quit);
+['path', 'name', 'depth'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') startScan(); }));
+
+loadDrives();
+loadCache(true).then(resumeScan);
+</script>
+</body>
+</html>
