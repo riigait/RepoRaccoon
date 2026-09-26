@@ -80,7 +80,8 @@ findergit -w -port 7718    :: other port
 ```
 
 - Pick drives, folder, name, depth → **Scan**. **Stop** cancels a scan.
-- Opens with the last full scan (cache). Live search + sortable columns.
+- Opens with the last full scan (cache). Live search + sortable columns. Warns when the cache is older than 1 day (**Rescan all**).
+- **Activity graph** (GitHub-style): commits made on this PC per day over the last year, pushed or not, read from each repo's local reflog (`.git/logs/HEAD`). Pulled/cloned commits are not counted. Click a day to show only repos active that day. Note: git may prune reflog entries older than ~90 days.
 - Per repo: **Folder** (Explorer), **Code** (VS Code), **Term** (Windows Terminal), **Copy** path. Remote links open on GitHub.
 - Stop: `Ctrl+C` in the terminal or **Stop server** on the page.
 - Local only: listens on `localhost`, API accepts only requests from its own page, and open buttons only work on repo paths from scan results.

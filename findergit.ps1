@@ -154,9 +154,32 @@ function Get-GitDir([string]$repo) {
     return $null
 }
 
+# Commits made on this PC per day (last year), from the HEAD reflog.
+# Returns @{ 'yyyy-MM-dd' = count }. Pulled/cloned commits are not counted.
+function Get-Activity([string]$gitDir) {
+    $days = @{}
+    $log = Join-Path $gitDir 'logs\HEAD'
+    if (-not [System.IO.File]::Exists($log)) { return $days }
+    $cutoff = [DateTimeOffset]::Now.AddDays(-371).ToUnixTimeSeconds()
+    try {
+        foreach ($line in [System.IO.File]::ReadLines($log)) {
+            if ($line.IndexOf("`tcommit") -lt 0) { continue }
+            # "<old> <new> Name <email> <unix-time> <tz>`tcommit (initial|amend|merge): msg"
+            if ($line -match '> (\d+) [+-]\d{4}\tcommit[^:]*:') {
+                $ts = [long]$Matches[1]
+                if ($ts -lt $cutoff) { continue }
+                $d = [DateTimeOffset]::FromUnixTimeSeconds($ts).LocalDateTime.ToString('yyyy-MM-dd')
+                if ($days.ContainsKey($d)) { $days[$d]++ } else { $days[$d] = 1 }
+            }
+        }
+    } catch { }
+    return $days
+}
+
 function Get-RepoInfo([string]$repo) {
     $branch = ''
     $remote = ''
+    $activity = @{}
     $gitDir = Get-GitDir $repo
     if ($gitDir) {
         try {
@@ -180,6 +203,8 @@ function Get-RepoInfo([string]$repo) {
                 $remote = $Matches[1] -replace '(?<=://)[^/@]+@', '***@'
             }
         } catch { }
+
+        $activity = Get-Activity $gitDir
     }
     $modified = ''
     try { $modified = [System.IO.Directory]::GetLastWriteTime($repo).ToString('yyyy-MM-dd HH:mm') } catch { }
@@ -190,6 +215,7 @@ function Get-RepoInfo([string]$repo) {
         Branch   = $branch
         Remote   = $remote
         Modified = $modified
+        Activity = $activity
     }
 }
 
@@ -269,6 +295,12 @@ if ($Cached) {
     }
     $cache = [System.IO.File]::ReadAllText($CacheFile) | ConvertFrom-Json
     Write-Host "Cache from $($cache.ScannedAt)" -ForegroundColor DarkGray
+    try {
+        $age = (Get-Date) - [datetime]::ParseExact($cache.ScannedAt, 'yyyy-MM-dd HH:mm', $null)
+        if ($age.TotalDays -ge 1) {
+            Write-Host "Cache is $([int][math]::Floor($age.TotalDays)) day(s) old - may be missing new repos. Run 'findergit' to refresh." -ForegroundColor Yellow
+        }
+    } catch { }
     $results = @($cache.Repos | Where-Object { $_.Name -like $pattern })
 } else {
     $roots = @()
@@ -297,9 +329,9 @@ $sorted = @($results | Sort-Object Path)
 
 $out = switch ($Format) {
     'Table' { $sorted | Format-Table Name, Branch, Remote, Path -AutoSize | Out-String -Width 4096 }
-    'List'  { $sorted | Format-List | Out-String -Width 4096 }
+    'List'  { $sorted | Select-Object -ExcludeProperty Activity -Property * | Format-List | Out-String -Width 4096 }
     'Json'  { ConvertTo-Json -InputObject $sorted -Depth 3 }
-    'Csv'   { $sorted | ConvertTo-Csv -NoTypeInformation }
+    'Csv'   { $sorted | Select-Object -ExcludeProperty Activity -Property * | ConvertTo-Csv -NoTypeInformation }
     'Path'  { $sorted | ForEach-Object { $_.Path } }
 }
 
