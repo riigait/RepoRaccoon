@@ -3,8 +3,8 @@
     RepoRaccoon web UI - local web server (http://localhost:<port>).
 
 .DESCRIPTION
-    Serves web\index.html and a small JSON API. Scans run findergit.ps1 in a
-    separate process. Only reachable from this PC. Start with "findergit -w".
+    Serves web\index.html and a small JSON API. Scans run reporaccoon.ps1 in a
+    separate process. Only reachable from this PC. Start with "reporaccoon -w".
 #>
 [CmdletBinding()]
 param(
@@ -13,10 +13,11 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$core = Join-Path $PSScriptRoot 'findergit.ps1'
+$core = Join-Path $PSScriptRoot 'reporaccoon.ps1'
 $indexFile = Join-Path $PSScriptRoot 'web\index.html'
 $iconFile = Join-Path $PSScriptRoot 'assets\reporaccoon.svg'
-$cacheFile = Join-Path $env:LOCALAPPDATA 'findergit\cache.json'
+$classicFile = Join-Path $PSScriptRoot 'web\classic.html'  # previous UI, kept at /classic
+$cacheFile = Join-Path $env:LOCALAPPDATA 'RepoRaccoon\cache.json'
 $prefix = "http://localhost:$Port/"
 $allowedHost = "localhost:$Port"
 
@@ -113,7 +114,7 @@ function Start-Scan($body) {
     if ($depth -gt 0) { $argsList += @('-m', [string]$depth) }
     if ($body.appdata -eq $true) { $argsList += '-a' }
 
-    $out = [System.IO.Path]::Combine([System.IO.Path]::GetTempPath(), "findergit-$([guid]::NewGuid().ToString('N')).json")
+    $out = [System.IO.Path]::Combine([System.IO.Path]::GetTempPath(), "reporaccoon-$([guid]::NewGuid().ToString('N')).json")
     $argsList += @('-o', $out)
 
     # Start-Process joins arguments with spaces: quote each one.
@@ -155,8 +156,13 @@ function Invoke-Route($ctx) {
     $route = $req.Url.AbsolutePath.TrimEnd('/')
     $method = $req.HttpMethod
 
-    if ($route -eq '' -and $method -eq 'GET') {
+    # '/raccoon' kept as an alias for old links to the (now default) raccoon page.
+    if (($route -eq '' -or $route -eq '/raccoon') -and $method -eq 'GET') {
         Send-Response $ctx 200 ([System.IO.File]::ReadAllText($indexFile)) 'text/html; charset=utf-8'
+        return
+    }
+    if ($route -eq '/classic' -and $method -eq 'GET') {
+        Send-Response $ctx 200 ([System.IO.File]::ReadAllText($classicFile)) 'text/html; charset=utf-8'
         return
     }
     if ($route -eq '/icon.svg' -and $method -eq 'GET') {
@@ -166,7 +172,7 @@ function Invoke-Route($ctx) {
     if (-not $route.StartsWith('/api/')) { Send-Error $ctx 404 'Not found'; return }
 
     # Only our own page may call the API: blocks other websites (CSRF / DNS rebinding).
-    if ($req.Headers['Host'] -ne $allowedHost -or $req.Headers['X-Findergit'] -ne '1') {
+    if ($req.Headers['Host'] -ne $allowedHost -or $req.Headers['X-RepoRaccoon'] -ne '1') {
         Send-Error $ctx 403 'Forbidden'
         return
     }
@@ -224,7 +230,7 @@ $listener.Prefixes.Add($prefix)
 try { $listener.Start() }
 catch {
     Write-Host "Cannot start on port $Port : $($_.Exception.Message)" -ForegroundColor Red
-    Write-Host "Try another port: findergit -w -port 7718"
+    Write-Host "Try another port: reporaccoon -w -port 7718"
     return
 }
 

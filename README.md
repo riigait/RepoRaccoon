@@ -4,7 +4,7 @@
 
 Sniffs out your git repositories anywhere.
 
-RepoRaccoon locates git repositories (folders containing `.git`) across every environment you work in. The command is `findergit` (or its alias `reporaccoon`).
+RepoRaccoon locates git repositories (folders containing `.git`) across every environment you work in. The command is `reporaccoon`.
 
 - **Windows terminal** — PowerShell, CMD, Git Bash
 - **Windows apps** — File Explorer, desktop app windows
@@ -19,7 +19,8 @@ One tool to answer: *"Where are all my git repos, local and remote?"*
 ## Status
 
 - [x] Windows terminal (PowerShell 5.1 / 7, CMD, Windows Terminal)
-- [x] Local web UI (`findergit -w`)
+- [x] Local web UI (`reporaccoon -w`) — raccoon mascot, activity heatmap, most active repos, filters, pagination
+- [x] Automatic scanning (daily scheduled task + auto-scan when the web UI opens with old results)
 - [ ] Windows app windows
 - [ ] macOS terminal
 - [ ] Linux / Ubuntu terminal
@@ -29,29 +30,31 @@ One tool to answer: *"Where are all my git repos, local and remote?"*
 
 1. [ ] Ubuntu / macOS version (one bash script)
 2. [ ] GitHub tab — list your GitHub repos, mark which are cloned on this PC
-3. [ ] Windows app feel — Start menu / desktop shortcut, hidden server, daily auto scan
-4. [ ] Extras — git status column (uncommitted / unpushed), last commit date, duplicate clones, export button in web UI
+3. [ ] Windows app feel — Start menu / desktop shortcut with the raccoon icon, hidden server
+   - [x] Daily auto scan (`reporaccoon -install`)
+4. [ ] Extras — git status column (uncommitted / unpushed), last commit date, export button in web UI
+   - [x] Duplicate clones (copies badge + filter)
 
 ## Windows usage
 
 ### Install (global command)
 
 Add this folder to your user `PATH` (already done on this PC), then open a **new** terminal.
-`findergit` then works from any folder in CMD, PowerShell and Windows Terminal.
+`reporaccoon` then works from any folder in CMD, PowerShell and Windows Terminal.
 
 ### Examples
 
 ```bat
-findergit                  :: find all git repos on all drives (C:, D:, USB...)
-findergit -d D             :: all repos on drive D:
-findergit -d C,D           :: drives C: and D:
-findergit pappime          :: repos whose folder name contains "pappime"
-findergit api -d D         :: name filter + drive
-findergit -p D:\vs -m 3    :: scan a folder, max 3 levels deep
-findergit -c               :: last full scan, instant (cache)
-findergit -c api           :: search the cache by name
-findergit -f json -o repos.json
-findergit -h               :: help
+reporaccoon                :: find all git repos on all drives (C:, D:, USB...)
+reporaccoon -d D           :: all repos on drive D:
+reporaccoon -d C,D         :: drives C: and D:
+reporaccoon pappime        :: repos whose folder name contains "pappime"
+reporaccoon api -d D       :: name filter + drive
+reporaccoon -p D:\vs -m 3  :: scan a folder, max 3 levels deep
+reporaccoon -c             :: last full scan, instant (cache)
+reporaccoon -c api         :: search the cache by name
+reporaccoon -f json -o repos.json
+reporaccoon -h             :: help
 ```
 
 ### Options
@@ -72,23 +75,37 @@ findergit -h               :: help
 | `-v` | Version |
 | `-h`, `--help`, `/?` | Help |
 
-Cache: a full scan (plain `findergit`) is saved to `%LOCALAPPDATA%\findergit\cache.json`.
+Cache: a full scan (plain `reporaccoon`) is saved to `%LOCALAPPDATA%\RepoRaccoon\cache.json`.
+
+## Automatic scanning
+
+```bat
+reporaccoon -install            :: scan every day at 12:30 and 5 min after logon (hidden)
+reporaccoon -install -at 09:00  :: other time
+reporaccoon -uninstall          :: remove it
+```
+
+- Creates a Windows scheduled task **"RepoRaccoon daily scan"** for your user (no admin needed). It runs a full scan in the background and refreshes the cache, so `reporaccoon -c` and the web UI are always current. Missed runs (PC off) run as soon as possible.
+- Log: `%LOCALAPPDATA%\RepoRaccoon\background.log` (last 100 lines).
+- The web UI also scans all drives automatically when you open it and the saved results are missing or older than 1 day (press **Stop** to cancel).
 
 ## Web UI
 
 ```bat
-findergit -w               :: start at http://localhost:7717 and open browser
-findergit -w -port 7718    :: other port
+reporaccoon -w             :: start at http://localhost:7717 and open browser
+reporaccoon -w -port 7718  :: other port
 ```
 
+- Live raccoon mascot: blinks, follows your mouse, digs while scanning, holds up its find when done, hides when a scan fails. Respects Windows "reduce motion".
 - Pick drives, folder, name, depth → **Scan**. **Stop** cancels a scan.
+- **Most active** panel beside the heatmap: top 5 repos for 30d / 90d / 1y (or the selected day); click one to filter the table.
 - Opens with the last full scan (cache). Live search + sortable columns. Warns when the cache is older than 1 day (**Rescan all**).
 - **Activity graph** (GitHub-style): commits made on this PC per day over the last year, pushed or not, read from each repo's local reflog (`.git/logs/HEAD`). Pulled/cloned commits are not counted. Click a day to show only repos active that day. Note: git may prune reflog entries older than ~90 days.
 - Per repo: **Code** (VS Code) plus a **⋯** menu — open folder (Explorer), open terminal here, copy path, copy remote URL. Remote links open on GitHub.
 - Stop: `Ctrl+C` in the terminal or **Stop server** on the page.
 - Local only: listens on `localhost`, API accepts only requests from its own page, and open buttons only work on repo paths from scan results.
 
-Files: `findergit-web.ps1` (server, built-in PowerShell `HttpListener`, no installs), `web/index.html` (page).
+Files: `reporaccoon-web.ps1` (server, built-in PowerShell `HttpListener`, no installs), `web/index.html` (page). The previous design is kept at `http://localhost:7717/classic` (`web/classic.html`).
 
 ### Notes
 
@@ -96,7 +113,7 @@ Files: `findergit-web.ps1` (server, built-in PowerShell `HttpListener`, no insta
 - Credentials in remote URLs are masked (`https://***@github.com/...`).
 - Skips: `Windows`, `$Recycle.Bin`, `System Volume Information`, `node_modules`, `.venv`, `venv`, `__pycache__`, `.cache`, `AppData`, symlinks/junctions.
 - Detects normal repos, worktrees and submodules (`.git` file).
-- Uninstall: remove the `findergit` folder from user `PATH` (Settings → Environment Variables).
+- Uninstall: remove the `RepoRaccoon` folder from user `PATH` (Settings → Environment Variables).
 
 ## Icon
 

@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RepoRaccoon</title>
+<link rel="icon" type="image/svg+xml" href="/icon.svg">
+<style>
+  :root {
+    --bg: #f5f6f8; --panel: #ffffff; --panel-2: #f8f9fb; --text: #1b1f24; --muted: #59626d;
+    --border: #d5dae1; --accent: #2563eb; --accent-text: #ffffff; --accent-soft: #dbe7ff;
+    --chip: #eef1f5; --row-alt: #fafbfc; --row-hover: #eef3fb;
+    --danger: #b42323; --danger-soft: #fde8e8; --ok: #1a7336; --ok-soft: #e3f5e8;
+    --warn: #9a4d00; --warn-soft: #fff1dc; --code: #eef1f5;
+    --lv0: #e3e6ea; --lv1: #9be9a8; --lv2: #40c463; --lv3: #30a14e; --lv4: #216e39;
+    --shadow: 0 8px 24px rgba(15, 20, 30, .14);
+    --scroll-track: var(--panel-2); --scroll-thumb: #bcc4cf; --scroll-thumb-hover: #8196b8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0e1115; --panel: #161a20; --panel-2: #1b2027; --text: #e8ebef; --muted: #a3acb7;
+      --border: #2c333d; --accent: #5b95ff; --accent-text: #0a0d12; --accent-soft: #1d3157;
+      --chip: #212831; --row-alt: #181d23; --row-hover: #1f2631;
+      --danger: #ff7a7a; --danger-soft: #3a1c1f; --ok: #5bd28a; --ok-soft: #173123;
+      --warn: #ffb65c; --warn-soft: #3a2a14; --code: #232a33;
+      --lv0: #2a313b; --lv1: #0e4429; --lv2: #006d32; --lv3: #26a641; --lv4: #39d353;
+      --shadow: 0 8px 24px rgba(0, 0, 0, .5);
+      --scroll-thumb: #3b4556; --scroll-thumb-hover: #5b7298;
+    }
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 14px/1.5 "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
+  header, main, footer { max-width: 1240px; margin: 0 auto; padding: 0 16px; }
+  header { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; padding-top: 20px; }
+  header .logo { display: block; border-radius: 8px; }
+  header h1 { margin-right: 4px; }
+  h1 { font-size: 22px; margin: 0; letter-spacing: -0.02em; }
+  h1 span { color: var(--accent); }
+  h2 { font-size: 15px; margin: 0; font-weight: 600; }
+  .sub, .hint { color: var(--muted); }
+  .hint { font-size: 12px; font-weight: 400; }
+  .panel {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 16px; margin-top: 14px;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .label { font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .04em; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* controls */
+  input[type=text], input[type=number], input[type=search], select {
+    background: var(--panel-2); color: var(--text); border: 1px solid var(--border);
+    border-radius: 6px; padding: 7px 10px; font: inherit; min-width: 0; min-height: 36px;
+  }
+  input::placeholder { color: var(--muted); opacity: .8; }
+  label.field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
+  button {
+    font: inherit; border-radius: 6px; padding: 6px 14px; min-height: 36px; cursor: pointer;
+    border: 1px solid var(--border); background: var(--chip); color: var(--text);
+  }
+  button:hover:not(:disabled) { border-color: var(--muted); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
+  button.primary:hover:not(:disabled) { filter: brightness(1.08); border-color: var(--accent); }
+  button.big { font-size: 15px; padding: 8px 28px; min-height: 42px; }
+  button.ghost { background: transparent; }
+  button.danger { color: var(--danger); }
+  button.small { min-height: 30px; padding: 3px 10px; font-size: 13px; }
+  button:disabled { opacity: .45; cursor: default; }
+  .check { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; font-size: 13px; }
+  .check input { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); }
+
+  /* scan panel */
+  .scan-top { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; justify-content: space-between; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; min-height: 36px;
+    background: var(--chip); border: 1px solid var(--border); border-radius: 999px;
+    cursor: pointer; user-select: none;
+  }
+  .chip input { margin: 0; width: 15px; height: 15px; accent-color: var(--accent); }
+  .chip.on { background: var(--accent-soft); border-color: var(--accent); }
+  .chip small { color: var(--muted); font-size: 12px; }
+  .scan-actions { display: flex; gap: 8px; }
+  fieldset.options {
+    border: 1px solid var(--border); border-radius: 8px; margin: 14px 0 0; padding: 10px 12px 12px;
+    display: grid; grid-template-columns: minmax(200px, 2fr) minmax(140px, 1fr) 120px auto; gap: 10px 14px; align-items: end;
+  }
+  fieldset.options legend { padding: 0 6px; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  fieldset.options .check { min-height: 36px; }
+  .scan-status {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 14px;
+    padding-top: 12px; border-top: 1px solid var(--border);
+  }
+  .scan-status .msg { flex: 1 1 240px; min-width: 0; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: var(--chip); color: var(--muted); white-space: nowrap; }
+  .pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+  .pill.scanning { background: var(--accent-soft); color: var(--accent); }
+  .pill.scanning::before { animation: pulse 1s ease-in-out infinite; }
+  .pill.done { background: var(--ok-soft); color: var(--ok); }
+  .pill.stopped { background: var(--warn-soft); color: var(--warn); }
+  .pill.failed { background: var(--danger-soft); color: var(--danger); }
+  .progress { height: 3px; border-radius: 3px; background: var(--chip); overflow: hidden; flex-basis: 100%; }
+  .progress span { display: block; width: 30%; height: 100%; background: var(--accent); border-radius: 3px; animation: slide 1.2s ease-in-out infinite; }
+  @keyframes slide { from { transform: translateX(-100%); } to { transform: translateX(340%); } }
+  @keyframes pulse { 50% { opacity: .3; } }
+  @media (prefers-reduced-motion: reduce) { .progress span, .pill.scanning::before { animation: none; } .progress span { width: 100%; opacity: .5; } }
+  .cache-info { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+  .cache-info.warn { color: var(--warn); font-weight: 600; }
+
+  /* activity graph */
+  /* Heatmap (wide, left) + most active repos (narrow, right); stacks on small windows. */
+  .activity { display: grid; grid-template-columns: minmax(0, 1fr) 270px; gap: 20px; }
+  /* Column: title top, hint bottom, heatmap centered — fills the height of the list. */
+  .activity-main { min-width: 0; display: flex; flex-direction: column; }
+  .activity-main .graph-wrap { flex: 1; display: flex; align-items: center; }
+  .top-repos { border-left: 1px solid var(--border); padding-left: 20px; min-width: 0; }
+  .top-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 2px; }
+  .top-head h3 { font-size: 14px; margin: 0; }
+  .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+  .seg button { min-height: 26px; padding: 0 9px; font-size: 12px; border: 0; border-radius: 0; background: transparent; color: var(--muted); }
+  .seg button + button { border-left: 1px solid var(--border); }
+  .seg button[aria-pressed=true] { background: var(--accent-soft); color: var(--text); font-weight: 600; }
+  .seg button:disabled { opacity: .4; }
+  #topList { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 2px; }
+  #topList button {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 3px 10px; width: 100%;
+    text-align: left; padding: 5px 8px; min-height: 0; border: 1px solid transparent; background: transparent; border-radius: 6px;
+  }
+  #topList button:hover { background: var(--row-hover); border-color: transparent; }
+  #topList button[aria-pressed=true] { background: var(--accent-soft); border-color: var(--accent); }
+  .top-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .top-count { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .top-path { grid-column: 1 / -1; font: 11.5px Consolas, "Cascadia Mono", monospace; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .top-bar { grid-column: 1 / -1; height: 5px; border-radius: 3px; background: var(--lv0); overflow: hidden; }
+  .top-bar span { display: block; height: 100%; background: var(--lv3); border-radius: 3px; }
+  .top-empty { color: var(--muted); font-size: 13px; padding: 12px 0; }
+  @media (max-width: 1200px) {  /* heatmap needs ~830px; below this, stack the list */
+    .activity { grid-template-columns: 1fr; }
+    .top-repos { border-left: 0; padding-left: 0; border-top: 1px solid var(--border); padding-top: 14px; }
+    .top-head, #topList { max-width: 560px; }
+  }
+  .graph-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .graph-head b { font-weight: 700; }
+  .graph-wrap { overflow-x: auto; padding-bottom: 2px; }
+  #graph { display: block; }
+  #graph text { fill: var(--muted); font-size: 11px; }
+  #graph rect { rx: 2px; cursor: pointer; stroke: rgba(127, 127, 127, .15); stroke-width: 1px; }
+  #graph rect:hover { stroke: var(--text); }
+  #graph rect.future { cursor: default; opacity: 0; }
+  #graph rect.sel { stroke: var(--accent); stroke-width: 2.5px; }
+  #graph.has-sel rect:not(.sel):not(.future) { opacity: .55; }
+  .lv0 { fill: var(--lv0); background: var(--lv0); }
+  .lv1 { fill: var(--lv1); background: var(--lv1); }
+  .lv2 { fill: var(--lv2); background: var(--lv2); }
+  .lv3 { fill: var(--lv3); background: var(--lv3); }
+  .lv4 { fill: var(--lv4); background: var(--lv4); }
+  .legend { display: flex; align-items: center; gap: 3px; font-size: 12px; color: var(--muted); }
+  .legend i { width: 12px; height: 12px; border-radius: 2px; display: inline-block; border: 1px solid rgba(127, 127, 127, .15); }
+  .day-filter {
+    display: inline-flex; align-items: center; gap: 6px; background: var(--accent-soft); color: var(--text);
+    border: 1px solid var(--accent); border-radius: 999px; padding: 2px 4px 2px 12px; font-size: 13px; font-weight: 600;
+  }
+  .day-filter button { min-height: 26px; padding: 0 8px; border: 0; background: transparent; }
+
+  /* results */
+  .results-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; margin-bottom: 12px; }
+  .count-big { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; line-height: 1; }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+  .search { position: relative; flex: 1 1 280px; }
+  .search input { width: 100%; padding-left: 34px; min-height: 40px; font-size: 15px; }
+  .search svg { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+  .search kbd { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font: 11px Consolas, monospace; color: var(--muted); border: 1px solid var(--border); border-radius: 4px; padding: 0 5px; }
+  .toolbar select { min-height: 40px; }
+  /* position: relative keeps absolutely positioned .sr-only text inside the scroll box
+     (otherwise it escapes and makes the whole page scroll sideways). */
+  .table-wrap { position: relative; overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; }
+  /* Table scrollbar: slim, theme-colored. Chromium/Edge/Safari use the ::-webkit
+     rules (they allow a hover color); Firefox gets the standard properties. */
+  .table-wrap::-webkit-scrollbar { width: 10px; height: 10px; }
+  .table-wrap::-webkit-scrollbar-track { background: var(--scroll-track); border-radius: 0 0 8px 8px; }
+  .table-wrap::-webkit-scrollbar-thumb {
+    background: var(--scroll-thumb); border-radius: 999px;
+    border: 2px solid var(--scroll-track);  /* inset look, keeps the thumb slim */
+  }
+  .table-wrap::-webkit-scrollbar-thumb:hover { background: var(--scroll-thumb-hover); }
+  .table-wrap::-webkit-scrollbar-thumb:active { background: var(--accent); }
+  .table-wrap::-webkit-scrollbar-corner { background: var(--scroll-track); }
+  @supports not selector(::-webkit-scrollbar) {
+    .table-wrap { scrollbar-width: thin; scrollbar-color: var(--scroll-thumb) var(--scroll-track); }
+  }
+  /* Fixed columns + wrapping text: the table always fits its box (no sideways overflow). */
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  thead th:nth-child(1) { width: 18%; } thead th:nth-child(2) { width: 13%; } thead th:nth-child(3) { width: 27%; }
+  thead th:nth-child(4) { width: 20%; } thead th:nth-child(5) { width: 13%; } thead th:nth-child(6) { width: 118px; }
+  @media (max-width: 1000px) { table th, table td { padding-left: 8px; padding-right: 8px; } table thead th { letter-spacing: 0; } }
+  thead th { overflow: hidden; text-overflow: ellipsis; }
+  td { overflow-wrap: anywhere; }
+  th, td { text-align: left; padding: 10px 12px; vertical-align: middle; }
+  thead th { background: var(--panel-2); border-bottom: 1px solid var(--border); font-size: 12px; color: var(--muted); font-weight: 600; white-space: nowrap; }
+  th button { all: unset; cursor: pointer; display: inline-flex; gap: 4px; align-items: center; }
+  th button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+  th[aria-sort=ascending] button::after { content: "\25B4"; }
+  th[aria-sort=descending] button::after { content: "\25BE"; }
+  tbody tr { border-bottom: 1px solid var(--border); }
+  tbody tr:last-child { border-bottom: 0; }
+  tbody tr:nth-child(even) { background: var(--row-alt); }
+  tbody tr:hover, tbody tr:focus-within { background: var(--row-hover); }
+  .name { font-weight: 600; }
+  .repo-cell { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+  .badge { font-size: 12px; font-weight: 600; border-radius: 999px; padding: 1px 8px; min-height: 0; line-height: 1.5; }
+  button.badge { background: var(--warn-soft); color: var(--warn); border: 1px solid transparent; }
+  .badge.commits { background: var(--ok-soft); color: var(--ok); }
+  .branch { font-family: Consolas, "Cascadia Mono", monospace; font-size: 12.5px; background: var(--code); padding: 2px 7px; border-radius: 4px; display: inline-block; max-width: 100%; overflow-wrap: anywhere; }
+  .mono { font-family: Consolas, "Cascadia Mono", monospace; font-size: 13px; }
+  .clip { display: block; overflow-wrap: break-word; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  td.mod { color: var(--muted); }
+  td.actions { white-space: nowrap; text-align: right; }
+  td.actions button { min-height: 32px; padding: 3px 12px; font-size: 13px; }
+  td.actions .more { padding: 3px 10px; font-weight: 700; letter-spacing: 1px; }
+  .empty { text-align: center; color: var(--muted); padding: 36px 12px; }
+
+  /* row action menu */
+  #menu {
+    position: absolute; z-index: 10; min-width: 200px; padding: 6px; background: var(--panel);
+    border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow);
+  }
+  #menu button { display: flex; width: 100%; border: 0; background: transparent; text-align: left; min-height: 34px; padding: 6px 10px; }
+  #menu button:hover, #menu button:focus-visible { background: var(--row-hover); outline: none; }
+  #menu hr { border: 0; border-top: 1px solid var(--border); margin: 4px 0; }
+
+  footer { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 18px 16px; color: var(--muted); font-size: 13px; }
+  #toast {
+    position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
+    background: var(--text); color: var(--bg); padding: 9px 16px; border-radius: 6px; font-weight: 600;
+    opacity: 0; transition: opacity .2s; pointer-events: none; max-width: calc(100% - 32px);
+  }
+  #toast.show { opacity: 1; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .mobile-only { display: none; }
+
+  @media (max-width: 860px) {
+    fieldset.options { grid-template-columns: 1fr 1fr; }
+   
+  }
+  /* Narrow: each repo becomes a stacked card. */
+  @media (max-width: 720px) {
+    fieldset.options { grid-template-columns: 1fr; }
+    .scan-actions { width: 100%; }
+    .scan-actions .primary { flex: 1; }
+    .mobile-only { display: inline-block; }
+    .table-wrap { border: 0; overflow: visible; }
+    table, tbody, tr, td { display: block; width: 100%; }
+    thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+    tbody tr { border: 1px solid var(--border) !important; border-radius: 8px; margin-bottom: 10px; padding: 8px 12px; background: var(--panel) !important; }
+    td { display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 8px; padding: 5px 0; }
+    td::before { content: attr(data-label); color: var(--muted); font-size: 12px; font-weight: 600; }
+    td > * { justify-self: start; max-width: 100%; }
+    td.actions { text-align: left; display: flex; gap: 8px; padding-top: 8px; }
+    td.actions::before { content: none; }
+    td.actions button { flex: 1; min-height: 38px; }
+    td.empty { display: block; }
+    td.empty::before { content: none; }
+    .clip { max-width: 100%; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <img class="logo" src="/icon.svg" width="36" height="36" alt="">
+  <h1>Repo<span>Raccoon</span></h1>
+  <div class="sub">sniffs out every git repository on this PC</div>
+</header>
+
+<main>
+  <!-- Scan -->
+  <section class="panel" aria-labelledby="scanTitle">
+    <h2 id="scanTitle" class="sr-only">Scan</h2>
+    <div class="scan-top">
+      <div>
+        <div class="label">Drives <span class="hint">— none selected = all drives</span></div>
+        <div class="chips" id="drives"><span class="sub">Loading drives…</span></div>
+      </div>
+      <div class="scan-actions">
+        <button class="primary big" id="scanBtn">Scan</button>
+        <button class="danger" id="stopBtn" disabled>Stop</button>
+      </div>
+    </div>
+
+    <fieldset class="options">
+      <legend>Optional filters</legend>
+      <label class="field">Folder
+        <input type="text" id="path" placeholder="e.g. D:\vs" autocomplete="off">
+      </label>
+      <label class="field">Repo name contains
+        <input type="text" id="name" placeholder="e.g. api" autocomplete="off">
+      </label>
+      <label class="field">Max depth <span class="sr-only">(0 means unlimited)</span>
+        <input type="number" id="depth" min="0" max="100" value="0" title="0 = unlimited">
+      </label>
+      <label class="check"><input type="checkbox" id="appdata"> Include AppData</label>
+    </fieldset>
+
+    <div class="scan-status">
+      <span class="pill" id="statePill">Ready</span>
+      <span class="msg" id="status" role="status" aria-live="polite"></span>
+      <span class="cache-info" id="cacheInfo"></span>
+      <button class="small" id="rescanBtn" hidden>Rescan all</button>
+      <button class="small ghost" id="cacheBtn" title="Reload results of the last full scan">Load last full scan</button>
+      <div class="progress" id="progress" hidden><span></span></div>
+    </div>
+  </section>
+
+  <!-- Activity -->
+  <section class="panel activity" aria-labelledby="graphTitle">
+    <div class="activity-main">
+      <div class="graph-head">
+        <h2 id="graphTitle" style="font-weight:400"></h2>
+        <div class="row">
+          <span id="graphDay" class="day-filter" hidden></span>
+          <div class="legend" aria-hidden="true">Less <i class="lv0"></i><i class="lv1"></i><i class="lv2"></i><i class="lv3"></i><i class="lv4"></i> More</div>
+        </div>
+      </div>
+      <div class="graph-wrap"><svg id="graph" role="img" aria-label="Commits per day over the last year"></svg></div>
+      <div class="hint" style="margin-top:6px">Commits made on this PC (pushed or not), from each repo's local git log. Click a day to filter the table.</div>
+    </div>
+
+    <aside class="top-repos" aria-labelledby="topTitle">
+      <div class="top-head">
+        <h3 id="topTitle">Most active</h3>
+        <div class="seg" role="group" aria-label="Time period" id="topPeriod">
+          <button data-days="30" aria-pressed="false">30d</button>
+          <button data-days="90" aria-pressed="false">90d</button>
+          <button data-days="365" aria-pressed="true">1y</button>
+        </div>
+      </div>
+      <div class="hint" id="topSub"></div>
+      <ol id="topList"></ol>
+    </aside>
+  </section>
+
+  <!-- Results -->
+  <section class="panel" aria-labelledby="resultsTitle">
+    <div class="results-head">
+      <span class="count-big" id="countBig">0</span>
+      <h2 id="resultsTitle">repositories</h2>
+      <span class="sub" id="countSub"></span>
+    </div>
+
+    <div class="toolbar">
+      <div class="search">
+        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <label for="search" class="sr-only">Search repositories</label>
+        <input type="search" id="search" placeholder="Search name, path, branch or remote…" autocomplete="off">
+        <kbd aria-hidden="true">/</kbd>
+      </div>
+      <label class="sr-only" for="fDrive">Drive</label>
+      <select id="fDrive" title="Drive"></select>
+      <label class="sr-only" for="fBranch">Branch</label>
+      <select id="fBranch" title="Branch"></select>
+      <label class="sr-only" for="fRemote">Remote</label>
+      <select id="fRemote" title="Remote"></select>
+      <label class="sr-only" for="fModified">Modified</label>
+      <select id="fModified" title="Last modified">
+        <option value="">Modified: any time</option>
+        <option value="7">Last 7 days</option>
+        <option value="30">Last 30 days</option>
+        <option value="90">Last 90 days</option>
+        <option value="365">Last year</option>
+      </select>
+      <label class="sr-only mobile-only" for="sortSel">Sort by</label>
+      <select id="sortSel" class="mobile-only" title="Sort by">
+        <option value="Name">Sort: name</option>
+        <option value="Branch">Sort: branch</option>
+        <option value="Path">Sort: location</option>
+        <option value="Remote">Sort: remote</option>
+        <option value="Modified">Sort: modified</option>
+      </select>
+      <label class="check"><input type="checkbox" id="fDup"> Duplicates only</label>
+      <span id="dayFilter" class="day-filter" hidden></span>
+      <span id="repoChip" class="day-filter" hidden></span>
+      <button class="small ghost" id="clearFilters" hidden>Clear filters</button>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th data-key="Name"><button>Repository</button></th>
+            <th data-key="Branch"><button>Branch</button></th>
+            <th data-key="Path"><button>Location</button></th>
+            <th data-key="Remote"><button>Remote</button></th>
+            <th data-key="Modified"><button>Modified</button></th>
+            <th style="text-align:right"><span class="sr-only">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody id="rows"><tr><td colspan="6" class="empty">No results yet.</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <span>Runs locally on this PC only · localhost · <a href="/">← Back to the RepoRaccoon look</a></span>
+  <button class="small" id="quitBtn">Stop server</button>
+</footer>
+
+<div id="menu" role="menu" hidden>
+  <button role="menuitem" data-act="explorer">Open folder</button>
+  <button role="menuitem" data-act="code">Open in VS Code</button>
+  <button role="menuitem" data-act="terminal">Open terminal here</button>
+  <hr>
+  <button role="menuitem" data-act="copy">Copy path</button>
+  <button role="menuitem" data-act="copyRemote">Copy remote URL</button>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let repos = [], view = [];
+let sortKey = 'Name', sortDir = 1;
+let selectedDay = null;
+let pollTimer = null, scanStart = 0;
+
+async function api(url, method = 'GET', body) {
+  const res = await fetch(url, {
+    method,
+    headers: { 'X-RepoRaccoon': '1', 'Content-Type': 'application/json' },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || res.statusText);
+  return data;
+}
+
+// PowerShell 5.1 sometimes wraps arrays as {value:[...]}.
+const asArray = (x) => Array.isArray(x) ? x : (x && Array.isArray(x.value) ? x.value : (x ? [x] : []));
+
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ---- scan state ----
+const STATE_LABEL = { idle: 'Ready', scanning: 'Scanning', done: 'Completed', stopped: 'Stopped', failed: 'Failed' };
+
+function setState(kind, msg) {
+  const pill = $('statePill');
+  pill.className = 'pill' + (kind === 'idle' ? '' : ' ' + kind);
+  pill.textContent = STATE_LABEL[kind];
+  $('status').textContent = msg || '';
+  $('progress').hidden = kind !== 'scanning';
+}
+
+function setScanning(on) {
+  $('scanBtn').disabled = on;
+  $('cacheBtn').disabled = on;
+  $('rescanBtn').disabled = on;
+  $('stopBtn').disabled = !on;
+  $('scanBtn').textContent = on ? 'Scanning…' : 'Scan';
+}
+
+const fmtSecs = (s) => s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, '0')}s`;
+
+// "yyyy-MM-dd HH:mm" (local) -> Date
+const parseLocal = (s) => s ? new Date(String(s).replace(' ', 'T')) : null;
+
+function ago(date) {
+  const min = Math.round((Date.now() - date) / 60000);
+  if (min < 1) return 'just now';
+  if (min < 60) return `${min} min ago`;
+  const h = Math.round(min / 60);
+  if (h < 24) return `${h} h ago`;
+  const days = Math.round(h / 24);
+  if (days < 45) return days === 1 ? '1 day ago' : `${days} days ago`;
+  const months = Math.round(days / 30);
+  if (months < 12) return `${months} mo ago`;
+  return `${Math.round(days / 365)} yr ago`;
+}
+
+// Warn when the cache (last full scan) is missing or older than 1 day.
+function showCacheInfo(scannedAt) {
+  const el = $('cacheInfo');
+  if (!scannedAt) {
+    el.textContent = 'No full scan yet';
+    el.className = 'cache-info warn';
+    $('rescanBtn').hidden = false;
+    return;
+  }
+  const d = parseLocal(scannedAt);
+  const old = Date.now() - d > 24 * 60 * 60 * 1000;
+  el.textContent = `Last full scan: ${ago(d)}` + (old ? ' — may be missing new repos' : '');
+  el.title = scannedAt;
+  el.className = 'cache-info' + (old ? ' warn' : '');
+  $('rescanBtn').hidden = !old;
+}
+
+async function refreshCacheInfo() {
+  try { showCacheInfo((await api('/api/cache')).ScannedAt); } catch { }
+}
+
+// git@github.com:owner/repo.git -> https://github.com/owner/repo
+function webUrl(remote) {
+  if (!remote) return '';
+  let u = remote.replace('***@', '');
+  const ssh = u.match(/^(?:ssh:\/\/)?git@([^:/]+)[:/](.+)$/);
+  if (ssh) u = `https://${ssh[1]}/${ssh[2]}`;
+  u = u.replace(/\.git$/, '');
+  return /^https?:\/\//.test(u) ? u : '';
+}
+const hostOf = (r) => { const u = webUrl(r.Remote); try { return u ? new URL(u).host : ''; } catch { return ''; } };
+
+// C:\Users\me\a\b\c\repo -> C:\Users\…\c\repo
+// Escape, then allow line breaks after \ and / so long paths wrap at folder boundaries.
+const wrapSep = (s) => esc(s).replace(/([\\/])/g, '$1<wbr>');
+
+function shortPath(p, max = 48) {
+  if (!p || p.length <= max) return p;
+  const parts = p.split('\\');
+  let s = `${parts[0]}\\…\\${parts.slice(-2).join('\\')}`;
+  if (s.length > max) s = '…' + p.slice(-(max - 1));
+  return s;
+}
+
+async function loadDrives() {
+  try {
+    const drives = asArray(await api('/api/drives'));
+    $('drives').innerHTML = drives.map(d => `
+      <label class="chip" title="${esc(d.Type)} · ${esc(d.FreeGB)} GB free of ${esc(d.SizeGB)} GB">
+        <input type="checkbox" value="${esc(d.Letter)}"> <b>${esc(d.Letter)}:</b>
+        <small>${esc(d.Label || d.Type)}</small>
+      </label>`).join('');
+    $('drives').querySelectorAll('input').forEach(i =>
+      i.addEventListener('change', () => i.parentElement.classList.toggle('on', i.checked)));
+  } catch (e) {
+    $('drives').innerHTML = `<span class="sub">${esc(e.message)}</span>`;
+  }
+}
+
+async function loadCache(quiet) {
+  try {
+    const c = await api('/api/cache');
+    repos = asArray(c.Repos);
+    populateFilters();
+    render();
+    showCacheInfo(c.ScannedAt);
+    if (c.ScannedAt) setState('idle', `Showing ${repos.length} repos from the last full scan.`);
+    else setState('idle', quiet ? 'Press Scan to search all drives.' : 'No cache yet — run a full scan (no drives, folder, name or depth).');
+  } catch (e) { setState('failed', e.message); }
+}
+
+// ---- activity graph (GitHub-style) ----
+const activityOf = (r) => (r.Activity && typeof r.Activity === 'object') ? r.Activity : {};
+const dayKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const fmtDay = (key) => new Date(key + 'T00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+
+function renderGraph() {
+  const totals = {}, repoCount = {};
+  let hasData = false;
+  for (const r of repos) {
+    if (r.Activity !== undefined) hasData = true;
+    for (const [k, v] of Object.entries(activityOf(r))) {
+      totals[k] = (totals[k] || 0) + v;
+      repoCount[k] = (repoCount[k] || 0) + 1;
+    }
+  }
+
+  // 53 week columns ending this week, weeks start on Sunday.
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const start = new Date(today);
+  start.setDate(start.getDate() - 364);
+  start.setDate(start.getDate() - start.getDay());
+
+  const days = [];
+  for (let d = new Date(start); d <= today || d.getDay() !== 0; d.setDate(d.getDate() + 1)) days.push(new Date(d));
+  let total = 0;
+  const nonZero = [];
+  for (const d of days) { const c = totals[dayKey(d)] || 0; if (d <= today) { total += c; if (c) nonZero.push(c); } }
+  // Shade by quartile of active days, so one huge day does not wash out the rest.
+  nonZero.sort((a, b) => a - b);
+  const qt = (p) => nonZero[Math.min(nonZero.length - 1, Math.floor(p * nonZero.length))] || 0;
+  const cuts = [qt(0.25), qt(0.5), qt(0.75)];
+  const level = (c) => c === 0 ? 0 : c <= cuts[0] ? 1 : c <= cuts[1] ? 2 : c <= cuts[2] ? 3 : 4;
+
+  const cell = 12, step = 15, left = 32, top = 18;
+  const weeks = Math.ceil(days.length / 7);
+  let svg = '', lastMonth = -1;
+  days.forEach((d, i) => {
+    const w = Math.floor(i / 7), dow = d.getDay();
+    const key = dayKey(d);
+    // Month label on the first week that starts a new month.
+    if (dow === 0 && d.getMonth() !== lastMonth && w < weeks - 1) {
+      if (lastMonth !== -1 || d.getDate() <= 7) svg += `<text x="${left + w * step}" y="11">${d.toLocaleDateString(undefined, { month: 'short' })}</text>`;
+      lastMonth = d.getMonth();
+    }
+    const x = left + w * step, y = top + dow * step;
+    if (d > today) { svg += `<rect class="future" x="${x}" y="${y}" width="${cell}" height="${cell}"></rect>`; return; }
+    const c = totals[key] || 0;
+    const tip = c ? `${c} commit${c === 1 ? '' : 's'} in ${repoCount[key]} repo${repoCount[key] === 1 ? '' : 's'} · ${fmtDay(key)}` : `No commits · ${fmtDay(key)}`;
+    svg += `<rect class="lv${level(c)}${key === selectedDay ? ' sel' : ''}" data-day="${key}" x="${x}" y="${y}" width="${cell}" height="${cell}"><title>${esc(tip)}</title></rect>`;
+  });
+  ['Mon', 'Wed', 'Fri'].forEach((t, i) => { svg += `<text x="0" y="${top + (i * 2 + 1) * step + 10}">${t}</text>`; });
+
+  const g = $('graph');
+  g.setAttribute('width', left + weeks * step);
+  g.setAttribute('height', top + 7 * step);
+  g.classList.toggle('has-sel', !!selectedDay);
+  g.innerHTML = svg;
+
+  const activeRepos = repos.filter(r => Object.keys(activityOf(r)).length).length;
+  $('graphTitle').innerHTML = hasData
+    ? `<b>${total}</b> commits in the last year on this PC · <b>${activeRepos}</b> active repo${activeRepos === 1 ? '' : 's'}`
+    : 'No activity data yet — run a new scan (or <b>Rescan all</b>) to load it.';
+}
+
+// ---- most active repos (right of heatmap) ----
+let topDays = 365;
+let repoFilter = null;  // Path of the repo picked in the list
+
+function renderTopRepos() {
+  let from = '', label;
+  if (selectedDay) {
+    label = `on ${fmtDay(selectedDay)}`;
+  } else {
+    const d = new Date(); d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() - topDays + 1);
+    from = dayKey(d);
+    label = topDays === 365 ? 'in the last year' : `in the last ${topDays} days`;
+  }
+  const ranked = repos
+    .map(r => {
+      let c = 0;
+      for (const [k, v] of Object.entries(activityOf(r))) if (selectedDay ? k === selectedDay : k >= from) c += v;
+      return { r, c };
+    })
+    .filter(x => x.c > 0)
+    .sort((a, b) => b.c - a.c || String(a.r.Name).localeCompare(String(b.r.Name)))
+    .slice(0, 5);
+
+  $('topPeriod').querySelectorAll('button').forEach(b => {
+    b.setAttribute('aria-pressed', String(!selectedDay && +b.dataset.days === topDays));
+    b.disabled = !!selectedDay;
+    b.title = selectedDay ? 'Clear the day filter to pick a period' : '';
+  });
+  $('topSub').textContent = `Commits ${label} · click to filter`;
+  if (!ranked.length) {
+    $('topList').innerHTML = `<li class="top-empty">No commits ${esc(label)}.</li>`;
+    return;
+  }
+  const max = ranked[0].c;
+  // Show the path only when the name alone is ambiguous (same name in several places).
+  const sameName = (r) => repos.filter(x => x.Name === r.Name).length > 1;
+  $('topList').innerHTML = ranked.map(({ r, c }) => `<li>
+    <button data-path="${esc(r.Path)}" aria-pressed="${r.Path === repoFilter}" aria-label="${esc(r.Name)}, ${c} commits, ${esc(r.Path)}" title="${esc(r.Path)}">
+      <span class="top-name">${esc(r.Name)}</span><span class="top-count">${c}</span>
+      ${sameName(r) ? `<span class="top-path">${esc(shortPath(r.Path, 38))}</span>` : ''}
+      <span class="top-bar" aria-hidden="true"><span style="width:${Math.max(4, Math.round((c / max) * 100))}%"></span></span>
+    </button></li>`).join('');
+}
+
+function selectRepo(path) {
+  repoFilter = (path === repoFilter) ? null : path;
+  const chip = $('repoChip');
+  const r = repos.find(x => x.Path === repoFilter);
+  chip.hidden = !r;
+  if (r) chip.innerHTML = `Repo: ${esc(r.Name)} <button title="Show all repos" aria-label="Clear repo filter">✕</button>`;
+  render();
+}
+
+function selectDay(key) {
+  selectedDay = (key === selectedDay) ? null : key;
+  for (const id of ['dayFilter', 'graphDay']) {
+    const f = $(id);
+    f.hidden = !selectedDay;
+    if (selectedDay) f.innerHTML = `Day: ${esc(fmtDay(selectedDay))} <button title="Clear day filter" aria-label="Clear day filter">✕</button>`;
+  }
+  render();
+}
+
+// ---- filters ----
+function fillSelect(el, allText, opts) {
+  const keep = el.value;
+  el.innerHTML = `<option value="">${esc(allText)}</option>` + opts.map(o => `<option value="${esc(o.v)}">${esc(o.t)}</option>`).join('');
+  el.value = opts.some(o => o.v === keep) ? keep : '';
+}
+
+function populateFilters() {
+  const uniq = (a) => [...new Set(a.filter(Boolean))].sort((x, y) => x.localeCompare(y));
+  fillSelect($('fDrive'), 'Drive: all', uniq(repos.map(r => (r.Path || '').slice(0, 1).toUpperCase())).map(d => ({ v: d, t: `Drive ${d}:` })));
+  fillSelect($('fBranch'), 'Branch: all', uniq(repos.map(r => r.Branch)).map(b => ({ v: b, t: b })));
+  fillSelect($('fRemote'), 'Remote: any', [
+    { v: 'yes', t: 'Has remote' }, { v: 'no', t: 'No remote (local only)' },
+    ...uniq(repos.map(hostOf)).map(h => ({ v: 'host:' + h, t: h })),
+  ]);
+}
+
+// Same remote (or same name when there is no remote) = same repo in several places.
+function dupKey(r) {
+  const u = webUrl(r.Remote);
+  return u ? 'r:' + u.toLowerCase() : 'n:' + String(r.Name).toLowerCase();
+}
+
+function filtersActive() {
+  return !!($('search').value.trim() || $('fDrive').value || $('fBranch').value || $('fRemote').value ||
+    $('fModified').value || $('fDup').checked || selectedDay || repoFilter);
+}
+
+function clearFilters() {
+  $('search').value = '';
+  for (const id of ['fDrive', 'fBranch', 'fRemote', 'fModified']) $(id).value = '';
+  $('fDup').checked = false;
+  repoFilter = null;
+  $('repoChip').hidden = true;
+  if (selectedDay) selectDay(selectedDay); else render();
+}
+
+// ---- table ----
+function render() {
+  // Drop a repo filter whose repo is not in the current results (e.g. after a new scan).
+  if (repoFilter && !repos.some(r => r.Path === repoFilter)) { repoFilter = null; $('repoChip').hidden = true; }
+  renderGraph();
+  renderTopRepos();
+
+  const groups = new Map();
+  for (const r of repos) {
+    const k = dupKey(r);
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(r);
+  }
+
+  const q = $('search').value.trim().toLowerCase();
+  const drive = $('fDrive').value, branch = $('fBranch').value, remote = $('fRemote').value;
+  const days = parseInt($('fModified').value, 10) || 0;
+  const dupOnly = $('fDup').checked;
+
+  view = repos
+    .filter(r => !q || [r.Name, r.Path, r.Branch, r.Remote].some(v => String(v || '').toLowerCase().includes(q)))
+    .filter(r => !drive || (r.Path || '').slice(0, 1).toUpperCase() === drive)
+    .filter(r => !branch || r.Branch === branch)
+    .filter(r => !remote || (remote === 'yes' ? !!r.Remote : remote === 'no' ? !r.Remote : hostOf(r) === remote.slice(5)))
+    .filter(r => { if (!days) return true; const d = parseLocal(r.Modified); return d && Date.now() - d <= days * 864e5; })
+    .filter(r => !dupOnly || groups.get(dupKey(r)).length > 1)
+    .filter(r => !selectedDay || activityOf(r)[selectedDay])
+    .filter(r => !repoFilter || r.Path === repoFilter)
+    .sort((a, b) => String(a[sortKey] || '').localeCompare(String(b[sortKey] || ''), undefined, { sensitivity: 'base' }) * sortDir
+      || String(a.Path).localeCompare(String(b.Path)));
+
+  document.querySelectorAll('th[data-key]').forEach(th => {
+    th.setAttribute('aria-sort', th.dataset.key === sortKey ? (sortDir > 0 ? 'ascending' : 'descending') : 'none');
+  });
+  $('sortSel').value = sortKey;
+
+  const active = filtersActive();
+  $('countBig').textContent = active ? view.length : repos.length;
+  $('resultsTitle').textContent = (active ? view.length : repos.length) === 1 ? 'repository' : 'repositories';
+  $('countSub').textContent = active ? `shown of ${repos.length}` : '';
+  $('clearFilters').hidden = !active;
+
+  if (!view.length) {
+    $('rows').innerHTML = `<tr><td colspan="6" class="empty">${repos.length ? 'No repositories match these filters.' : 'No results yet — press Scan.'}</td></tr>`;
+    return;
+  }
+  $('rows').innerHTML = view.map((r, i) => {
+    const url = webUrl(r.Remote);
+    const copies = groups.get(dupKey(r));
+    const dup = copies.length > 1
+      ? `<button class="badge" data-dup="${i}" title="Same repo in ${copies.length} locations:\n${esc(copies.map(c => c.Path).join('\n'))}\n\nClick to show all copies">${copies.length} copies</button>` : '';
+    const dayCommits = selectedDay ? activityOf(r)[selectedDay] : 0;
+    const commits = dayCommits ? `<span class="badge commits">${dayCommits} commit${dayCommits === 1 ? '' : 's'}</span>` : '';
+    const remoteHtml = r.Remote
+      ? (url ? `<a class="clip" href="${esc(url)}" target="_blank" rel="noopener" title="${esc(r.Remote)}">${wrapSep(url.replace(/^https?:\/\//, ''))}</a>`
+             : `<span class="clip mono" title="${esc(r.Remote)}">${wrapSep(r.Remote)}</span>`)
+      : '<span class="sub">local only</span>';
+    const mod = parseLocal(r.Modified);
+    return `<tr data-i="${i}">
+      <td data-label="Repository"><div class="repo-cell"><span class="name">${esc(r.Name)}</span>${dup}${commits}</div></td>
+      <td data-label="Branch">${r.Branch ? `<span class="branch">${esc(r.Branch)}</span>` : '<span class="sub">—</span>'}</td>
+      <td data-label="Location"><span class="clip mono" title="${esc(r.Path)}">${wrapSep(r.Path)}</span></td>
+      <td data-label="Remote">${remoteHtml}</td>
+      <td data-label="Modified" class="mod" title="${esc(r.Modified)}">${mod && !isNaN(mod) ? esc(ago(mod)) : '—'}</td>
+      <td class="actions">
+        <button data-app="code" title="Open ${esc(r.Name)} in VS Code">Code</button>
+        <button class="more" aria-haspopup="menu" aria-expanded="false" aria-label="More actions for ${esc(r.Name)}" title="Folder, terminal, copy…">⋯</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ---- actions ----
+// Clipboard API can be blocked; fall back to the old textarea + execCommand way.
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); return true; } catch { }
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.setAttribute('readonly', '');
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch { }
+  ta.remove();
+  return ok;
+}
+
+const APP_NAME = { explorer: 'File Explorer', code: 'VS Code', terminal: 'Terminal' };
+
+async function doAction(act, r) {
+  if (act === 'copy' || act === 'copyRemote') {
+    const ok = await copyText(act === 'copy' ? r.Path : r.Remote);
+    toast(ok ? (act === 'copy' ? 'Path copied' : 'Remote URL copied') : 'Copy failed');
+    return;
+  }
+  try { await api('/api/open', 'POST', { path: r.Path, app: act }); toast(`Opened ${r.Name} in ${APP_NAME[act]}`); }
+  catch (err) { toast(err.message); }
+}
+
+let menuRepo = null, menuBtn = null;
+
+function openMenu(btn, r) {
+  closeMenu(false);
+  menuRepo = r; menuBtn = btn;
+  const m = $('menu');
+  m.querySelector('[data-act=copyRemote]').hidden = !r.Remote;
+  m.hidden = false;
+  const b = btn.getBoundingClientRect();
+  let left = b.right - m.offsetWidth;
+  if (left < 8) left = 8;
+  let top = b.bottom + 4;
+  if (top + m.offsetHeight > window.innerHeight - 8) top = b.top - m.offsetHeight - 4;
+  m.style.left = (left + window.scrollX) + 'px';
+  m.style.top = (top + window.scrollY) + 'px';
+  btn.setAttribute('aria-expanded', 'true');
+  m.querySelector('button').focus();
+}
+
+function closeMenu(refocus) {
+  const m = $('menu');
+  if (m.hidden) return;
+  m.hidden = true;
+  if (menuBtn) {
+    menuBtn.setAttribute('aria-expanded', 'false');
+    if (refocus) menuBtn.focus();
+  }
+  menuBtn = null;
+}
+
+$('menu').addEventListener('click', e => {
+  const b = e.target.closest('button[data-act]');
+  if (!b) return;
+  const r = menuRepo;
+  closeMenu(true);
+  doAction(b.dataset.act, r);
+});
+$('menu').addEventListener('keydown', e => {
+  const items = [...$('menu').querySelectorAll('button:not([hidden])')];
+  const i = items.indexOf(document.activeElement);
+  if (e.key === 'Escape') { e.preventDefault(); closeMenu(true); }
+  else if (e.key === 'ArrowDown') { e.preventDefault(); items[(i + 1) % items.length].focus(); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); items[(i - 1 + items.length) % items.length].focus(); }
+  else if (e.key === 'Tab') closeMenu(false);
+});
+document.addEventListener('click', e => { if (!e.target.closest('#menu, .more')) closeMenu(false); });
+window.addEventListener('resize', () => closeMenu(false));
+
+$('rows').addEventListener('click', e => {
+  const tr = e.target.closest('tr[data-i]');
+  if (!tr) return;
+  const r = view[+tr.dataset.i];
+  const app = e.target.closest('button[data-app]');
+  if (app) { doAction(app.dataset.app, r); return; }
+  const more = e.target.closest('button.more');
+  if (more) { $('menu').hidden || menuBtn !== more ? openMenu(more, r) : closeMenu(true); return; }
+  if (e.target.closest('button[data-dup]')) {
+    $('search').value = r.Remote ? webUrl(r.Remote).replace(/^https?:\/\//, '') || r.Name : r.Name;
+    render();
+  }
+});
+
+// ---- scanning ----
+async function startScan() {
+  const drives = [...$('drives').querySelectorAll('input:checked')].map(i => i.value);
+  const body = {
+    drives,
+    path: $('path').value.trim(),
+    name: $('name').value.trim(),
+    depth: parseInt($('depth').value, 10) || 0,
+    appdata: $('appdata').checked,
+  };
+  try {
+    await api('/api/scan', 'POST', body);
+  } catch (e) { setState('failed', e.message); return; }
+  const where = body.path || (drives.length ? drives.map(d => d + ':').join(', ') : 'all drives');
+  watchScan(where, Date.now());
+}
+
+function watchScan(where, start) {
+  setScanning(true);
+  scanStart = start;
+  setState('scanning', `Scanning ${where}…`);
+  clearInterval(pollTimer);
+  pollTimer = setInterval(() => pollScan(where), 1000);
+}
+
+// After a page reload, pick up a scan that is still running on the server.
+async function resumeScan() {
+  try {
+    const s = await api('/api/scan');
+    if (s.running) watchScan('(in progress)', Date.parse(s.startedAt) || Date.now());
+  } catch { }
+}
+
+async function pollScan(where) {
+  let s;
+  try { s = await api('/api/scan'); }
+  catch (e) { clearInterval(pollTimer); setScanning(false); setState('failed', 'Lost connection to the RepoRaccoon server. ' + e.message); return; }
+  const secs = Math.round((Date.now() - scanStart) / 1000);
+  if (s.running) { setState('scanning', `Scanning ${where}… ${fmtSecs(secs)} elapsed`); return; }
+  clearInterval(pollTimer);
+  setScanning(false);
+  if (s.error) {
+    setState(/stopped/i.test(s.error) ? 'stopped' : 'failed', /stopped/i.test(s.error) ? `Scan of ${where} stopped after ${fmtSecs(secs)}. Results were not changed.` : s.error);
+    return;
+  }
+  repos = asArray(s.results);
+  populateFilters();
+  render();
+  setState('done', `Found ${repos.length} repos in ${where} (${fmtSecs(secs)}).`);
+  refreshCacheInfo();  // a full scan updates the cache
+}
+
+async function stopScan() {
+  try { await api('/api/scan/stop', 'POST'); } catch (e) { setState('failed', e.message); }
+}
+
+function rescanAll() {
+  $('path').value = '';
+  $('name').value = '';
+  $('depth').value = '0';
+  $('drives').querySelectorAll('input:checked').forEach(i => i.click());
+  startScan();
+}
+
+async function quit() {
+  if (!confirm('Stop the RepoRaccoon server? This page will stop working.')) return;
+  try { await api('/api/quit', 'POST'); } catch { /* server already gone */ }
+  document.body.innerHTML = '<main><div class="panel" style="margin-top:40px">RepoRaccoon server stopped. Run <b>reporaccoon -w</b> to start it again.</div></main>';
+}
+
+// ---- wiring ----
+document.querySelectorAll('th[data-key] button').forEach(b => b.addEventListener('click', () => {
+  const key = b.parentElement.dataset.key;
+  if (sortKey === key) sortDir = -sortDir; else { sortKey = key; sortDir = 1; }
+  render();
+}));
+$('sortSel').addEventListener('change', () => { sortKey = $('sortSel').value; sortDir = 1; render(); });
+$('search').addEventListener('input', render);
+for (const id of ['fDrive', 'fBranch', 'fRemote', 'fModified', 'fDup']) $(id).addEventListener('change', render);
+$('clearFilters').addEventListener('click', clearFilters);
+$('scanBtn').addEventListener('click', startScan);
+$('stopBtn').addEventListener('click', stopScan);
+$('cacheBtn').addEventListener('click', () => loadCache(false));
+$('rescanBtn').addEventListener('click', rescanAll);
+$('quitBtn').addEventListener('click', quit);
+$('graph').addEventListener('click', e => { const d = e.target.closest('rect[data-day]'); if (d) selectDay(d.dataset.day); });
+for (const id of ['dayFilter', 'graphDay']) $(id).addEventListener('click', e => { if (e.target.closest('button')) selectDay(selectedDay); });
+$('topPeriod').addEventListener('click', e => { const b = e.target.closest('button[data-days]'); if (b) { topDays = +b.dataset.days; renderTopRepos(); } });
+$('topList').addEventListener('click', e => { const b = e.target.closest('button[data-path]'); if (b) selectRepo(b.dataset.path); });
+$('repoChip').addEventListener('click', e => { if (e.target.closest('button')) selectRepo(repoFilter); });
+['path', 'name', 'depth'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') startScan(); }));
+// "/" focuses search (like GitHub), Esc clears it.
+document.addEventListener('keydown', e => {
+  if (e.key === '/' && !/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) { e.preventDefault(); $('search').focus(); }
+});
+$('search').addEventListener('keydown', e => { if (e.key === 'Escape' && $('search').value) { $('search').value = ''; render(); } });
+
+loadDrives();
+loadCache(true).then(resumeScan);
+</script>
+</body>
+</html>

@@ -1,12 +1,12 @@
 <#
 .SYNOPSIS
-    RepoRaccoon (command: findergit) - find git repositories on Windows drives.
+    RepoRaccoon - find git repositories on Windows drives.
 
 .DESCRIPTION
     Scans local drives (auto-detected) or given drives/paths for git
     repositories (folders containing a .git directory or .git file) and lists
     them with branch and origin remote. Does not need git.exe installed.
-    Run "findergit -h" for usage.
+    Run "reporaccoon -h" for usage.
 #>
 [CmdletBinding(PositionalBinding = $false)]
 param(
@@ -61,6 +61,13 @@ param(
 
     [int]$Port = 7717,
 
+    # Daily background scan (Windows Task Scheduler, current user only).
+    [switch]$Install,
+    [string]$At = '12:30',
+    [switch]$Uninstall,
+    # Hidden full scan that only refreshes the cache (what the scheduled task runs).
+    [switch]$Background,
+
     [Alias('v')]
     [switch]$Version,
 
@@ -70,28 +77,29 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $AppName = 'RepoRaccoon'
-$AppVersion = '1.3.0'
-$CacheFile = Join-Path $env:LOCALAPPDATA 'findergit\cache.json'
+$AppVersion = '1.5.0'
+$CacheFile = Join-Path $env:LOCALAPPDATA 'RepoRaccoon\cache.json'
+$LogFile = Join-Path $env:LOCALAPPDATA 'RepoRaccoon\background.log'
+$TaskName = 'RepoRaccoon daily scan'
 
 function Show-Help {
     @"
 $AppName $AppVersion - sniffs out the git repositories on your drives
-(command: findergit, alias: reporaccoon)
 
 USAGE
-  findergit [name] [options]
+  reporaccoon [name] [options]
 
 EXAMPLES
-  findergit                  find all git repos on all drives
-  findergit -d D             find all git repos on drive D:
-  findergit -d C,D           scan drives C: and D:
-  findergit pappime          repos whose folder name contains "pappime"
-  findergit api -d D         name filter + drive
-  findergit -p D:\vs -m 3    scan a folder, max 3 levels deep
-  findergit -c               show last full scan instantly (cache)
-  findergit -c api           search the cache by name
-  findergit -f json -o repos.json
-  findergit -w               open the web UI in your browser
+  reporaccoon                find all git repos on all drives
+  reporaccoon -d D           find all git repos on drive D:
+  reporaccoon -d C,D         scan drives C: and D:
+  reporaccoon pappime        repos whose folder name contains "pappime"
+  reporaccoon api -d D       name filter + drive
+  reporaccoon -p D:\vs -m 3  scan a folder, max 3 levels deep
+  reporaccoon -c             show last full scan instantly (cache)
+  reporaccoon -c api         search the cache by name
+  reporaccoon -f json -o repos.json
+  reporaccoon -w             open the web UI in your browser
 
 OPTIONS
   [name], -n <name>     Repo folder name (contains). Wildcards * ? allowed
@@ -107,11 +115,13 @@ OPTIONS
   -nested               Keep scanning inside repos (submodules)
   -w                    Start web UI at http://localhost:7717 (Ctrl+C to stop)
   -port <n>             Web UI port (with -w)
-  -v                 Show version
+  -install [-at 12:30]  Scan automatically every day (and 5 min after logon), hidden
+  -uninstall            Remove the automatic daily scan
+  -v                    Show version
   -h                    Show this help
 
 NOTES
-  A full scan (no -d/-p/-m/name) is saved to the cache for "findergit -c".
+  A full scan (no -d/-p/-m/name) is saved to the cache for "reporaccoon -c".
   Skipped: Windows, `$Recycle.Bin, System Volume Information, node_modules,
   .venv, venv, __pycache__, .cache, AppData, symlinks/junctions.
 "@
@@ -279,12 +289,81 @@ function Find-Repos([string[]]$roots, [string]$pattern) {
     return , $results
 }
 
+# Save a full scan as the cache. Written to a temp file first and then swapped in,
+# so the web UI never reads a half-written file while a background scan saves.
+function Save-Cache($results) {
+    $dir = Split-Path $CacheFile -Parent
+    if (-not [System.IO.Directory]::Exists($dir)) { [void][System.IO.Directory]::CreateDirectory($dir) }
+    $payload = [pscustomobject]@{
+        ScannedAt = (Get-Date).ToString('yyyy-MM-dd HH:mm')
+        Repos     = @($results | Sort-Object Path)
+    }
+    $tmp = "$CacheFile.tmp"
+    [System.IO.File]::WriteAllText($tmp, ($payload | ConvertTo-Json -Depth 4))
+    # [NullString]::Value = real null (a plain $null reaches .NET as "" and Replace rejects it).
+    if ([System.IO.File]::Exists($CacheFile)) { [System.IO.File]::Replace($tmp, $CacheFile, [NullString]::Value) }
+    else { [System.IO.File]::Move($tmp, $CacheFile) }
+}
+
+function Write-Log([string]$msg) {
+    Write-Host $msg  # also to stdout (captured if the task output is redirected)
+    try {
+        $lines = @()
+        if ([System.IO.File]::Exists($LogFile)) { $lines = @([System.IO.File]::ReadAllLines($LogFile) | Select-Object -Last 99) }
+        $lines += "$((Get-Date).ToString('yyyy-MM-dd HH:mm:ss'))  $msg"
+        [System.IO.File]::WriteAllLines($LogFile, [string[]]$lines)
+    } catch { Write-Host "could not write log: $($_.Exception.Message)" }
+}
+
+function Install-Schedule {
+    if ($At -notmatch '^([01]?\d|2[0-3]):[0-5]\d$') { throw "Invalid time '$At'. Use HH:mm, e.g. -at 09:00" }
+    $script = Join-Path $PSScriptRoot 'reporaccoon.ps1'
+    $action = New-ScheduledTaskAction -Execute 'powershell.exe' `
+        -Argument "-NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$script`" -Background"
+    $daily = New-ScheduledTaskTrigger -Daily -At $At
+    $logon = New-ScheduledTaskTrigger -AtLogOn -User "$env:USERDOMAIN\$env:USERNAME"
+    $logon.Delay = 'PT5M'  # let Windows settle after login
+    $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
+        -ExecutionTimeLimit (New-TimeSpan -Hours 1) -MultipleInstances IgnoreNew
+    # Interactive = runs as you while you're logged in (no admin rights or stored password needed).
+    $principal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" -LogonType Interactive -RunLevel Limited
+    Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $daily, $logon -Settings $settings `
+        -Principal $principal -Description "${AppName}: refresh the repo cache (full scan, hidden)." -Force -ErrorAction Stop | Out-Null
+    $info = Get-ScheduledTask -TaskName $TaskName | Get-ScheduledTaskInfo
+    Write-Host "Automatic scan installed: every day at $At and 5 min after you log in (hidden)." -ForegroundColor Green
+    Write-Host "Next run: $($info.NextRunTime)   Log: $LogFile" -ForegroundColor DarkGray
+    Write-Host "Remove with: reporaccoon -uninstall" -ForegroundColor DarkGray
+}
+
+function Uninstall-Schedule {
+    if (Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue) {
+        Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false
+        Write-Host 'Automatic scan removed.' -ForegroundColor Green
+    } else {
+        Write-Host 'Automatic scan was not installed.' -ForegroundColor DarkGray
+    }
+}
+
 # ---- main ----
 
 if ($Help) { Show-Help; return }
-if ($Version) { "$AppName $AppVersion (command: findergit)"; return }
+if ($Version) { "$AppName $AppVersion"; return }
 if ($ListDrives) { Show-Drives; return }
-if ($Web) { & (Join-Path $PSScriptRoot 'findergit-web.ps1') -Port $Port; return }
+if ($Web) { & (Join-Path $PSScriptRoot 'reporaccoon-web.ps1') -Port $Port; return }
+if ($Install) { Install-Schedule; return }
+if ($Uninstall) { Uninstall-Schedule; return }
+if ($Background) {
+    $t0 = Get-Date
+    try {
+        $results = Find-Repos @(Get-DefaultRoots) '*'
+        Save-Cache $results
+        Write-Log "background scan: $($results.Count) repos in $([int](((Get-Date) - $t0).TotalSeconds))s"
+    } catch {
+        Write-Log "background scan FAILED: $($_.Exception.Message) (line $($_.InvocationInfo.ScriptLineNumber))"
+        exit 1
+    }
+    return
+}
 
 # Plain text name = "contains" match.
 $pattern = $Name
@@ -292,7 +371,7 @@ if ($pattern -notmatch '[\*\?\[]') { $pattern = "*$pattern*" }
 
 if ($Cached) {
     if (-not [System.IO.File]::Exists($CacheFile)) {
-        Write-Warning 'No cache yet. Run "findergit" once (full scan) first.'
+        Write-Warning 'No cache yet. Run "reporaccoon" once (full scan) first.'
         return
     }
     $cache = [System.IO.File]::ReadAllText($CacheFile) | ConvertFrom-Json
@@ -300,7 +379,7 @@ if ($Cached) {
     try {
         $age = (Get-Date) - [datetime]::ParseExact($cache.ScannedAt, 'yyyy-MM-dd HH:mm', $null)
         if ($age.TotalDays -ge 1) {
-            Write-Host "Cache is $([int][math]::Floor($age.TotalDays)) day(s) old - may be missing new repos. Run 'findergit' to refresh." -ForegroundColor Yellow
+            Write-Host "Cache is $([int][math]::Floor($age.TotalDays)) day(s) old - may be missing new repos. Run 'reporaccoon' to refresh." -ForegroundColor Yellow
         }
     } catch { }
     $results = @($cache.Repos | Where-Object { $_.Name -like $pattern })
@@ -315,15 +394,7 @@ if ($Cached) {
     $results = Find-Repos $roots $pattern
 
     if ($isFullScan) {
-        try {
-            $dir = Split-Path $CacheFile -Parent
-            if (-not [System.IO.Directory]::Exists($dir)) { [void][System.IO.Directory]::CreateDirectory($dir) }
-            $payload = [pscustomobject]@{
-                ScannedAt = (Get-Date).ToString('yyyy-MM-dd HH:mm')
-                Repos     = @($results | Sort-Object Path)
-            }
-            [System.IO.File]::WriteAllText($CacheFile, ($payload | ConvertTo-Json -Depth 4))
-        } catch { Write-Warning "Could not save cache: $($_.Exception.Message)" }
+        try { Save-Cache $results } catch { Write-Warning "Could not save cache: $($_.Exception.Message)" }
     }
 }
 
