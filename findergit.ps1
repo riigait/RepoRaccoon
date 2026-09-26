@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    findergit - find git repositories on Windows drives.
+    RepoRaccoon (command: findergit) - find git repositories on Windows drives.
 
 .DESCRIPTION
     Scans local drives (auto-detected) or given drives/paths for git
@@ -69,12 +69,14 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$AppVersion = '1.2.0'
+$AppName = 'RepoRaccoon'
+$AppVersion = '1.3.0'
 $CacheFile = Join-Path $env:LOCALAPPDATA 'findergit\cache.json'
 
 function Show-Help {
     @"
-findergit $AppVersion - find git repositories on your drives
+$AppName $AppVersion - sniffs out the git repositories on your drives
+(command: findergit, alias: reporaccoon)
 
 USAGE
   findergit [name] [options]
@@ -247,7 +249,7 @@ function Find-Repos([string[]]$roots, [string]$pattern) {
             $depth = $item[1]
             $scanned++
             if ($scanned % 1000 -eq 0) {
-                Write-Progress -Activity 'findergit' -Status "$($results.Count) repos | $scanned folders | $dir"
+                Write-Progress -Activity $AppName -Status "$($results.Count) repos | $scanned folders | $dir"
             }
 
             try { $children = ([System.IO.DirectoryInfo]$dir).GetDirectories() }
@@ -272,7 +274,7 @@ function Find-Repos([string[]]$roots, [string]$pattern) {
             }
         }
     }
-    Write-Progress -Activity 'findergit' -Completed
+    Write-Progress -Activity $AppName -Completed
     Write-Host "Scanned $scanned folders." -ForegroundColor DarkGray
     return , $results
 }
@@ -280,7 +282,7 @@ function Find-Repos([string[]]$roots, [string]$pattern) {
 # ---- main ----
 
 if ($Help) { Show-Help; return }
-if ($Version) { "findergit $AppVersion"; return }
+if ($Version) { "$AppName $AppVersion (command: findergit)"; return }
 if ($ListDrives) { Show-Drives; return }
 if ($Web) { & (Join-Path $PSScriptRoot 'findergit-web.ps1') -Port $Port; return }
 

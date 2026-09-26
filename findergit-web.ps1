@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    findergit web UI - local web server (http://localhost:<port>) for findergit.
+    RepoRaccoon web UI - local web server (http://localhost:<port>).
 
 .DESCRIPTION
     Serves web\index.html and a small JSON API. Scans run findergit.ps1 in a
@@ -15,6 +15,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $core = Join-Path $PSScriptRoot 'findergit.ps1'
 $indexFile = Join-Path $PSScriptRoot 'web\index.html'
+$iconFile = Join-Path $PSScriptRoot 'assets\reporaccoon.svg'
 $cacheFile = Join-Path $env:LOCALAPPDATA 'findergit\cache.json'
 $prefix = "http://localhost:$Port/"
 $allowedHost = "localhost:$Port"
@@ -158,6 +159,10 @@ function Invoke-Route($ctx) {
         Send-Response $ctx 200 ([System.IO.File]::ReadAllText($indexFile)) 'text/html; charset=utf-8'
         return
     }
+    if ($route -eq '/icon.svg' -and $method -eq 'GET') {
+        Send-Response $ctx 200 ([System.IO.File]::ReadAllText($iconFile)) 'image/svg+xml; charset=utf-8'
+        return
+    }
     if (-not $route.StartsWith('/api/')) { Send-Error $ctx 404 'Not found'; return }
 
     # Only our own page may call the API: blocks other websites (CSRF / DNS rebinding).
@@ -223,7 +228,7 @@ catch {
     return
 }
 
-Write-Host "findergit web UI running at $prefix" -ForegroundColor Green
+Write-Host "RepoRaccoon web UI running at $prefix" -ForegroundColor Green
 Write-Host 'Press Ctrl+C (or "Stop server" in the page) to stop.' -ForegroundColor DarkGray
 if (-not $NoBrowser) { Start-Process $prefix }
 
@@ -243,5 +248,5 @@ try {
     if ($scan.Proc -and -not $scan.Proc.HasExited) { $scan.Proc.Kill() }
     $listener.Stop()
     $listener.Close()
-    Write-Host 'findergit web UI stopped.'
+    Write-Host 'RepoRaccoon web UI stopped.'
 }

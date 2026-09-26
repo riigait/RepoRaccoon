@@ -1,8 +1,10 @@
-# findergit
+<p align="center"><img src="assets/reporaccoon-256.png" width="128" height="128" alt="RepoRaccoon icon: a raccoon rummaging through a git folder"></p>
 
-Find your git directories anywhere.
+# RepoRaccoon
 
-`findergit` locates git repositories (folders containing `.git`) across every environment you work in:
+Sniffs out your git repositories anywhere.
+
+RepoRaccoon locates git repositories (folders containing `.git`) across every environment you work in. The command is `findergit` (or its alias `reporaccoon`).
 
 - **Windows terminal** — PowerShell, CMD, Git Bash
 - **Windows apps** — File Explorer, desktop app windows
@@ -82,7 +84,7 @@ findergit -w -port 7718    :: other port
 - Pick drives, folder, name, depth → **Scan**. **Stop** cancels a scan.
 - Opens with the last full scan (cache). Live search + sortable columns. Warns when the cache is older than 1 day (**Rescan all**).
 - **Activity graph** (GitHub-style): commits made on this PC per day over the last year, pushed or not, read from each repo's local reflog (`.git/logs/HEAD`). Pulled/cloned commits are not counted. Click a day to show only repos active that day. Note: git may prune reflog entries older than ~90 days.
-- Per repo: **Folder** (Explorer), **Code** (VS Code), **Term** (Windows Terminal), **Copy** path. Remote links open on GitHub.
+- Per repo: **Code** (VS Code) plus a **⋯** menu — open folder (Explorer), open terminal here, copy path, copy remote URL. Remote links open on GitHub.
 - Stop: `Ctrl+C` in the terminal or **Stop server** on the page.
 - Local only: listens on `localhost`, API accepts only requests from its own page, and open buttons only work on repo paths from scan results.
 
@@ -95,3 +97,19 @@ Files: `findergit-web.ps1` (server, built-in PowerShell `HttpListener`, no insta
 - Skips: `Windows`, `$Recycle.Bin`, `System Volume Information`, `node_modules`, `.venv`, `venv`, `__pycache__`, `.cache`, `AppData`, symlinks/junctions.
 - Detects normal repos, worktrees and submodules (`.git` file).
 - Uninstall: remove the `findergit` folder from user `PATH` (Settings → Environment Variables).
+
+## Icon
+
+`assets/reporaccoon.svg` is the source. It is used as the web UI favicon and logo (served at `/icon.svg`).
+
+Windows icon: `assets/reporaccoon.ico` (16–256 px) and `assets/reporaccoon-256.png`. Rebuild after editing the SVG:
+
+```bat
+powershell -ExecutionPolicy Bypass -File assets\build-icon.ps1
+```
+
+Uses headless Microsoft Edge to render each size — no extra installs.
+
+## License
+
+[MIT](LICENSE) © 2026 riigait
