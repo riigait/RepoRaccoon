@@ -98,6 +98,37 @@ reporaccoon -h             :: help
 
 Cache: a full scan (plain `reporaccoon`) is saved to `%LOCALAPPDATA%\RepoRaccoon\cache.json`.
 
+## MCP server
+
+The source checkout includes `reporaccoon-mcp.ps1`, a dependency-free stdio MCP
+server for Windows PowerShell 5.1 or 7. Configure your MCP client to launch
+`powershell.exe` with these arguments (replace the script path for your checkout):
+
+```json
+{
+  "mcpServers": {
+    "reporaccoon": {
+      "command": "powershell.exe",
+      "args": ["-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "D:\\vs\\RepoRaccoon\\reporaccoon-mcp.ps1"]
+    }
+  }
+}
+```
+
+Clients with different configuration formats can use the same command and arguments.
+The client starts and stops the process; there is no HTTP port or background service.
+The adapter implements [MCP stdio](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports)
+with protocol version `2025-06-18`.
+
+Tool: `find_repositories`, requiring an absolute `path`, with optional `name`
+and `maxDepth` (1-10, default 3). For example, ask your assistant to find repositories
+under `D:\vs` with depth 2. Results include names, branches and paths, without remote
+URLs or file contents. Scans reuse the existing finder, do not change repositories
+or refresh the cache, and stop descending when they find a repository.
+The local client can request any folder accessible to its Windows user.
+Scans run sequentially; cancellation does not interrupt a running scan.
+The release installer does not install this adapter; use its source checkout path.
+
 ## Automatic scanning
 
 ```bat
