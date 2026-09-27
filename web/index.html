@@ -14,13 +14,13 @@
     --text: #eef1f5; --muted: #9aa4b1; --fur: #b9c2ce; --border: #27303b; --border-2: #343e4b;
     /* folder */
     --amber: #f5a93b; --amber-2: #e58a1f; --amber-hi: #ffd18a; --amber-deep: #b8661a;
-    --amber-soft: rgba(245, 169, 59, .14); --amber-text: #1c2027;
+    --amber-soft: rgba(245, 169, 59, .14); --amber-text: #1c2027; --amber-ink: #f5a93b;
     /* code sheet */
     --paper: #e9eef4; --blue: #5b95ff; --blue-soft: rgba(91, 149, 255, .14);
     --ok: #5bd28a; --ok-soft: rgba(91, 210, 138, .14); --danger: #ff7a7a; --danger-soft: rgba(255, 122, 122, .14);
     /* acorn heat scale */
     --lv0: #212933; --lv1: #5b3b13; --lv2: #9a5a14; --lv3: #e58a1f; --lv4: #ffc466;
-    --shadow: 0 10px 30px rgba(0, 0, 0, .45);
+    --shadow: 0 8px 24px rgba(0, 0, 0, .4);  /* menus + toast only */
     --radius: 14px;
   }
   @media (prefers-color-scheme: light) {
@@ -28,11 +28,11 @@
       --bg: #f3eee6; --bg-glow: #fff7ea; --panel: #ffffff; --panel-2: #faf6ef; --mask: #1c2027;
       --text: #1c2027; --muted: #5d6673; --fur: #6f7a88; --border: #e4dacb; --border-2: #d6cab7;
       --amber: #f0a33a; --amber-2: #dd8217; --amber-hi: #ffd18a; --amber-deep: #a85a12;
-      --amber-soft: rgba(240, 163, 58, .16); --amber-text: #1c2027;
+      --amber-soft: rgba(240, 163, 58, .16); --amber-text: #1c2027; --amber-ink: #9a520f;
       --paper: #ffffff; --blue: #2f6fe0; --blue-soft: rgba(47, 111, 224, .1);
       --ok: #1a7336; --ok-soft: rgba(26, 115, 54, .1); --danger: #b42323; --danger-soft: rgba(180, 35, 35, .08);
       --lv0: #ebe3d6; --lv1: #ffd9a0; --lv2: #f7b44a; --lv3: #e58a1f; --lv4: #a85a12;
-      --shadow: 0 10px 30px rgba(60, 40, 10, .14);
+      --shadow: 0 8px 24px rgba(60, 40, 10, .12);
     }
   }
   * { box-sizing: border-box; }
@@ -41,10 +41,8 @@
   body {
     margin: 0; color: var(--text); min-height: 100vh;
     font: 14px/1.5 "Segoe UI", system-ui, -apple-system, sans-serif;
-    background:
-      radial-gradient(1100px 500px at 10% -10%, var(--bg-glow), transparent 60%),
-      radial-gradient(900px 400px at 110% 0%, rgba(245, 169, 59, .06), transparent 60%),
-      var(--bg);
+    background: var(--bg);
+
   }
   :focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
   a { color: var(--blue); text-decoration: none; }
@@ -56,14 +54,14 @@
   .mono { font-family: Consolas, "Cascadia Mono", monospace; font-size: 13px; }
 
   /* ===== Header with the live raccoon ===== */
-  header.top { display: flex; align-items: center; gap: 16px; padding-top: 18px; flex-wrap: wrap; }
-  .brand { display: flex; align-items: center; gap: 14px; min-width: 0; }
-  .brand h1 { margin: 0; font-size: 26px; letter-spacing: -0.02em; line-height: 1.1; }
-  .brand h1 span { color: var(--amber); }
-  .brand .tag { font-size: 13px; color: var(--muted); }
+  header.top { display: flex; align-items: center; gap: 12px 16px; padding-top: 14px; flex-wrap: wrap; }
+  .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .brand h1 { margin: 0; font-size: 22px; letter-spacing: -0.02em; line-height: 1.15; }
+  .brand h1 span { color: var(--amber-ink); }
+  .brand .tag { font-size: 12.5px; color: var(--muted); }
   .bubble {
-    position: relative; margin-left: 6px; padding: 8px 14px; border-radius: 12px; max-width: 420px;
-    background: var(--paper); color: #1c2027; font-weight: 600; font-size: 13px; box-shadow: var(--shadow);
+    position: relative; margin-left: 6px; padding: 6px 12px; border-radius: 10px; max-width: 380px;
+    background: var(--paper); color: #1c2027; font-weight: 600; font-size: 12.5px; border: 1px solid var(--border-2);
     transition: transform .25s ease, opacity .25s ease;
   }
   .bubble::before {
@@ -72,10 +70,15 @@
   }
   .bubble.pop { animation: bubblePop .35s cubic-bezier(.3, 1.6, .5, 1); }
   @keyframes bubblePop { from { transform: scale(.85); opacity: .3; } }
-  .top-links { margin-left: auto; font-size: 13px; }
+  /* View switch (Raccoon | Classic) */
+  .view-switch { margin-left: auto; display: inline-flex; border: 1px solid var(--border-2); border-radius: 8px; overflow: hidden; font-size: 13px; }
+  .view-switch a { padding: 5px 12px; color: var(--muted); text-decoration: none; }
+  .view-switch a + a { border-left: 1px solid var(--border-2); }
+  .view-switch a:hover { color: var(--text); background: var(--panel-2); }
+  .view-switch a[aria-current=page] { background: var(--amber); color: var(--amber-text); font-weight: 700; }
 
   /* ===== Mascot (inline SVG, states via data-state) ===== */
-  .mascot { width: 78px; height: 78px; flex: none; overflow: visible; cursor: pointer; }
+  .mascot { width: 58px; height: 58px; flex: none; overflow: visible; cursor: pointer; }
   .mascot svg { width: 100%; height: 100%; overflow: visible; display: block; }
   .mascot #mTail { transform-origin: 49px 45px; animation: sway 3.2s ease-in-out infinite; }
   .mascot #mHead { transition: transform .45s cubic-bezier(.3, 1.5, .5, 1); }
@@ -115,8 +118,8 @@
 
   /* ===== Folder panels ===== */
   .folder {
-    position: relative; margin-top: 44px; padding: 18px; background: var(--panel);
-    border: 1px solid var(--border); border-radius: 0 var(--radius) var(--radius) var(--radius); box-shadow: var(--shadow);
+    position: relative; margin-top: 42px; padding: 18px; background: var(--panel);
+    border: 1px solid var(--border); border-radius: 0 var(--radius) var(--radius) var(--radius);
   }
   .folder > .tab {
     position: absolute; left: -1px; bottom: 100%; height: 30px; display: flex; align-items: center; gap: 8px;
@@ -125,12 +128,8 @@
   }
   .folder > .tab::before { content: ""; width: 8px; height: 8px; border-radius: 2px; background: var(--border-2); transition: background .2s; }
   .folder:focus-within > .tab, .folder.active > .tab { color: var(--text); }
-  .folder:focus-within > .tab::before, .folder.active > .tab::before { background: var(--amber); box-shadow: 0 0 10px var(--amber); }
-  /* folder lip highlight, like the icon's edge */
-  .folder::before {
-    content: ""; position: absolute; left: 14px; right: 14px; top: 0; height: 1px;
-    background: linear-gradient(90deg, transparent, var(--amber-hi), transparent); opacity: .35;
-  }
+  .folder:focus-within > .tab::before, .folder.active > .tab::before { background: var(--amber); }
+
 
   /* ===== Controls ===== */
   input[type=text], input[type=number], input[type=search], select {
@@ -156,14 +155,13 @@
   button.folder-btn {
     position: relative; min-height: 48px; padding: 10px 30px 10px 26px; font-size: 16px; font-weight: 800; letter-spacing: .02em;
     color: var(--amber-text); border: 0; border-radius: 4px 12px 12px 12px;
-    background: linear-gradient(180deg, var(--amber-hi) 0, var(--amber) 12%, var(--amber-2) 100%);
-    box-shadow: 0 6px 18px rgba(229, 138, 31, .35), inset 0 -3px 0 rgba(0, 0, 0, .15);
+    background: var(--amber); box-shadow: inset 0 -3px 0 rgba(0, 0, 0, .14);
   }
   button.folder-btn::before {
     content: ""; position: absolute; left: 0; top: -7px; width: 38%; height: 9px; border-radius: 6px 8px 0 0;
     background: var(--amber-deep);
   }
-  button.folder-btn:hover:not(:disabled) { filter: brightness(1.07); }
+  button.folder-btn:hover:not(:disabled) { background: var(--amber-2); }
   .check { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; font-size: 13px; }
   .check input { width: 16px; height: 16px; margin: 0; accent-color: var(--amber); }
 
@@ -177,6 +175,7 @@
   }
   .chip input { margin: 0; width: 15px; height: 15px; accent-color: var(--amber); }
   .chip.on { background: var(--amber-soft); border-color: var(--amber); }
+  .chip:has(input:focus-visible) { outline: 2px solid var(--amber); outline-offset: 2px; }
   .chip small { color: var(--muted); font-size: 12px; }
   .scan-actions { display: flex; gap: 10px; align-items: flex-end; }
   fieldset.options {
@@ -189,14 +188,14 @@
   .scan-status .msg { flex: 1 1 240px; min-width: 0; }
   .pill { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: var(--panel-2); color: var(--muted); white-space: nowrap; }
   .pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
-  .pill.scanning { background: var(--amber-soft); color: var(--amber); }
+  .pill.scanning { background: var(--amber-soft); color: var(--amber-ink); }
   .pill.scanning::before { animation: pulse 1s ease-in-out infinite; }
   .pill.done { background: var(--ok-soft); color: var(--ok); }
-  .pill.stopped { background: var(--amber-soft); color: var(--amber); }
+  .pill.stopped { background: var(--amber-soft); color: var(--amber-ink); }
   .pill.failed { background: var(--danger-soft); color: var(--danger); }
   @keyframes pulse { 50% { opacity: .3; } }
   .cache-info { font-size: 13px; color: var(--muted); }
-  .cache-info.warn { color: var(--amber); font-weight: 700; }
+  .cache-info.warn { color: var(--amber-ink); font-weight: 700; }
 
   /* Ringed-tail progress bar with a walking paw */
   .tailbar { position: relative; flex-basis: 100%; height: 12px; border-radius: 999px; overflow: hidden; background: var(--mask); border: 1px solid var(--border-2); }
@@ -213,9 +212,11 @@
   .activity { display: grid; grid-template-columns: minmax(0, 1fr) 270px; gap: 20px; }
   .activity-main { min-width: 0; display: flex; flex-direction: column; }
   .activity-main .graph-wrap { flex: 1; display: flex; align-items: center; overflow-x: auto; padding: 4px 0; }
-  .graph-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .graph-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; min-height: 34px; }
+  .graph-head .day-filter { padding-top: 0; padding-bottom: 0; }
+  .graph-head .day-filter button { min-height: 22px; }
   .graph-head h2 { margin: 0; font-size: 15px; font-weight: 400; }
-  .graph-head b { font-weight: 800; color: var(--amber); }
+  .graph-head b { font-weight: 800; color: var(--amber-ink); }
   #graph { display: block; }
   #graph text { fill: var(--muted); font-size: 11px; }
   #graph rect { rx: 2.5px; cursor: pointer; stroke: rgba(127, 127, 127, .12); stroke-width: 1px; transition: opacity .2s; }
@@ -243,19 +244,20 @@
   .seg button { min-height: 26px; padding: 0 9px; font-size: 12px; border: 0; border-radius: 0; background: transparent; color: var(--muted); }
   .seg button + button { border-left: 1px solid var(--border-2); }
   .seg button[aria-pressed=true] { background: var(--amber); color: var(--amber-text); font-weight: 800; }
-  #topList { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 2px; }
+  /* Reserve room for 5 rows so the panel (and the graph beside it) keeps its height when a day filter shows fewer repos */
+  #topList { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 2px; align-content: start; min-height: 218px; }
   #topList button {
     display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 3px 10px; width: 100%; align-items: center;
     text-align: left; padding: 5px 8px; min-height: 0; border: 1px solid transparent; background: transparent; border-radius: 8px;
   }
   #topList button:hover { background: var(--amber-soft); border-color: transparent; }
   #topList button[aria-pressed=true] { background: var(--amber-soft); border-color: var(--amber); }
-  .rank { font: 800 12px Consolas, monospace; color: var(--amber); width: 16px; }
+  .rank { font: 800 12px Consolas, monospace; color: var(--amber-ink); width: 18px; }
   .top-name { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .top-count { font-weight: 800; font-variant-numeric: tabular-nums; }
   .top-path { grid-column: 2 / -1; font: 11.5px Consolas, monospace; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .top-bar { grid-column: 2 / -1; height: 6px; border-radius: 3px; background: var(--lv0); overflow: hidden; }
-  .top-bar span { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--amber-2), var(--amber-hi)); transform-origin: left; animation: grow .6s cubic-bezier(.2, .8, .2, 1) both; }
+  .top-bar span { display: block; height: 100%; border-radius: 3px; background: var(--amber); transform-origin: left; animation: grow .6s cubic-bezier(.2, .8, .2, 1) both; }
   @keyframes grow { from { transform: scaleX(0); } }
   .top-empty { color: var(--muted); font-size: 13px; padding: 12px 0; }
   @media (max-width: 1200px) {
@@ -266,12 +268,12 @@
 
   /* ===== Results ===== */
   .results-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; margin-bottom: 12px; }
-  .count-big { font-size: 34px; font-weight: 900; letter-spacing: -0.03em; line-height: 1; color: var(--amber); font-variant-numeric: tabular-nums; }
+  .count-big { font-size: 34px; font-weight: 900; letter-spacing: -0.03em; line-height: 1; color: var(--amber-ink); font-variant-numeric: tabular-nums; }
   .results-head h2 { margin: 0; font-size: 16px; }
   .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
   .search { position: relative; flex: 1 1 280px; }
   .search input { width: 100%; padding-left: 36px; min-height: 42px; font-size: 15px; }
-  .search svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--amber); pointer-events: none; }
+  .search svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--amber-ink); pointer-events: none; }
   .search kbd { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font: 11px Consolas, monospace; color: var(--muted); border: 1px solid var(--border-2); border-radius: 4px; padding: 0 5px; }
   .toolbar select { min-height: 42px; }
   .table-wrap { position: relative; overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; }
@@ -292,8 +294,8 @@
   thead th { background: var(--panel-2); border-bottom: 1px solid var(--border); font-size: 12px; color: var(--muted); font-weight: 700; white-space: nowrap; text-transform: uppercase; letter-spacing: .05em; }
   th button { all: unset; cursor: pointer; display: inline-flex; gap: 4px; align-items: center; }
   th button:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; border-radius: 3px; }
-  th[aria-sort=ascending] button::after { content: "\25B4"; color: var(--amber); }
-  th[aria-sort=descending] button::after { content: "\25BE"; color: var(--amber); }
+  th[aria-sort=ascending] button::after { content: "\25B4"; color: var(--amber-ink); }
+  th[aria-sort=descending] button::after { content: "\25BE"; color: var(--amber-ink); }
   /* each row = a file sheet with a blue code line on the left */
   tbody tr { border-bottom: 1px solid var(--border); box-shadow: inset 3px 0 0 var(--blue-soft); transition: background .15s, box-shadow .15s; }
   tbody tr:last-child { border-bottom: 0; }
@@ -308,7 +310,7 @@
   }
   :root { --paw: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cellipse cx='8' cy='11' rx='4' ry='3.4'/%3E%3Ccircle cx='3' cy='6.5' r='1.7'/%3E%3Ccircle cx='6.2' cy='3.8' r='1.8'/%3E%3Ccircle cx='9.8' cy='3.8' r='1.8'/%3E%3Ccircle cx='13' cy='6.5' r='1.7'/%3E%3C/svg%3E"); }
   .badge { font-size: 12px; font-weight: 700; border-radius: 999px; padding: 1px 8px; min-height: 0; line-height: 1.5; }
-  button.badge { background: var(--amber-soft); color: var(--amber); border: 1px solid transparent; }
+  button.badge { background: var(--amber-soft); color: var(--amber-ink); border: 1px solid transparent; font-weight: 700; }
   .badge.commits { background: var(--ok-soft); color: var(--ok); }
   .branch { font-family: Consolas, monospace; font-size: 12.5px; background: var(--mask); color: #d7dde5; padding: 2px 8px; border-radius: 6px; display: inline-block; max-width: 100%; overflow-wrap: anywhere; }
   .clip { display: block; overflow-wrap: break-word; }
@@ -349,7 +351,7 @@
     .brand { flex-wrap: wrap; }
     .bubble { flex-basis: 100%; max-width: none; margin: 6px 0 0; }
     .bubble::before { left: 32px; top: -6px; transform: rotate(45deg); }
-    .top-links { margin-left: 0; }
+    .view-switch { margin-left: 0; }
     fieldset.options { grid-template-columns: 1fr; }
     .scan-actions { width: 100%; }
     .scan-actions .folder-btn { flex: 1; }
@@ -450,7 +452,7 @@
       </div>
       <div class="bubble" id="bubble" aria-hidden="true">Warming up the whiskers…</div>
     </div>
-    <div class="top-links"><a href="/classic">Classic view</a></div>
+    <nav class="view-switch" aria-label="View"><a href="/" aria-current="page">Raccoon</a><a href="/classic">Classic</a></nav>
   </header>
 
   <main>
@@ -501,7 +503,7 @@
         <div class="activity-main">
           <div class="graph-head">
             <h2 id="graphTitle"></h2>
-            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:nowrap;margin-left:auto">
               <span id="graphDay" class="day-filter" hidden></span>
               <div class="legend" aria-hidden="true">Less <i class="lv0"></i><i class="lv1"></i><i class="lv2"></i><i class="lv3"></i><i class="lv4"></i> More</div>
             </div>
@@ -590,8 +592,7 @@
 </div>
 
 <footer class="wrap">
-  <span>Runs locally on this PC only · localhost · <a href="/classic">Classic view</a></span>
-  <button class="small" id="quitBtn">Stop server</button>
+  <span>Runs locally on this PC only · localhost</span>
 </footer>
 
 <div id="menu" role="menu" hidden>
@@ -684,7 +685,8 @@ mascot.addEventListener('click', () => {
 // Count numbers up (e.g. 0 -> 19).
 function countUp(el, to) {
   const from = parseInt(el.textContent, 10) || 0;
-  if (reduceMotion || from === to) { el.textContent = to; return; }
+  // Hidden tabs pause animation frames, so show the final number right away there.
+  if (reduceMotion || document.hidden || from === to) { el.textContent = to; return; }
   const t0 = performance.now(), dur = 600;
   cancelAnimationFrame(el._raf);
   const step = (t) => {
@@ -1258,12 +1260,6 @@ function rescanAll() {
   return startScan();
 }
 
-async function quit() {
-  if (!confirm('Stop the RepoRaccoon server? This page will stop working.')) return;
-  try { await api('/api/quit', 'POST'); } catch { }
-  document.querySelector('main').innerHTML = '<section class="folder"><div class="tab">Bye</div>RepoRaccoon server stopped. Run <b>reporaccoon -w</b> to start it again.</section>';
-  setMascot('stopped', 'Nap time. See you later!');
-}
 
 // ===== Wiring =====
 document.querySelectorAll('th[data-key] button').forEach(b => b.addEventListener('click', () => {
@@ -1285,7 +1281,6 @@ $('scanBtn').addEventListener('click', startScan);
 $('stopBtn').addEventListener('click', stopScan);
 $('cacheBtn').addEventListener('click', () => loadCache(false));
 $('rescanBtn').addEventListener('click', rescanAll);
-$('quitBtn').addEventListener('click', quit);
 $('graph').addEventListener('click', e => { const d = e.target.closest('rect[data-day]'); if (d) selectDay(d.dataset.day); });
 for (const id of ['dayFilter', 'graphDay']) $(id).addEventListener('click', e => { if (e.target.closest('button')) selectDay(selectedDay); });
 $('topPeriod').addEventListener('click', e => { const b = e.target.closest('button[data-days]'); if (b) { topDays = +b.dataset.days; renderTopRepos(); } });
@@ -1296,6 +1291,15 @@ document.addEventListener('keydown', e => {
   if (e.key === '/' && !/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) { e.preventDefault(); $('search').focus(); }
 });
 $('search').addEventListener('keydown', e => { if (e.key === 'Escape' && $('search').value) { $('search').value = ''; render(); } });
+
+// Heartbeat: keeps the background server alive while this page is open (it stops
+// by itself a while after the last page closes). On return, say so if it has stopped.
+setInterval(() => { api('/api/ping').catch(() => { }); }, 60000);
+document.addEventListener('visibilitychange', async () => {
+  if (document.hidden) return;
+  try { await api('/api/ping'); }
+  catch { setState('failed', 'The RepoRaccoon server has stopped (no page was open for a while). Run reporaccoon -w to start it again.', 'I dozed off… run reporaccoon -w to wake me.'); }
+});
 
 init();
 </script>

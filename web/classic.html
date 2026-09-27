@@ -38,6 +38,13 @@
   header { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; padding-top: 20px; }
   header .logo { display: block; border-radius: 8px; }
   header h1 { margin-right: 4px; }
+  /* View switch (Raccoon | Classic) — same look as on the raccoon page */
+  .view-switch { margin-left: auto; display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; font-size: 13px; }
+  .view-switch a { padding: 5px 12px; color: var(--muted); text-decoration: none; }
+  .view-switch a + a { border-left: 1px solid var(--border); }
+  .view-switch a:hover { color: var(--text); background: var(--chip); text-decoration: none; }
+  .view-switch a[aria-current=page] { background: #f5a93b; color: #1c2027; font-weight: 700; }
+  @media (max-width: 720px) { .view-switch { margin-left: 0; } }
   h1 { font-size: 22px; margin: 0; letter-spacing: -0.02em; }
   h1 span { color: var(--accent); }
   h2 { font-size: 15px; margin: 0; font-weight: 600; }
@@ -275,6 +282,7 @@
   <img class="logo" src="/icon.svg" width="36" height="36" alt="">
   <h1>Repo<span>Raccoon</span></h1>
   <div class="sub">sniffs out every git repository on this PC</div>
+  <nav class="view-switch" aria-label="View"><a href="/">Raccoon</a><a href="/classic" aria-current="page">Classic</a></nav>
 </header>
 
 <main>
@@ -406,8 +414,7 @@
 </main>
 
 <footer>
-  <span>Runs locally on this PC only · localhost · <a href="/">← Back to the RepoRaccoon look</a></span>
-  <button class="small" id="quitBtn">Stop server</button>
+  <span>Runs locally on this PC only · localhost</span>
 </footer>
 
 <div id="menu" role="menu" hidden>
@@ -953,11 +960,6 @@ function rescanAll() {
   startScan();
 }
 
-async function quit() {
-  if (!confirm('Stop the RepoRaccoon server? This page will stop working.')) return;
-  try { await api('/api/quit', 'POST'); } catch { /* server already gone */ }
-  document.body.innerHTML = '<main><div class="panel" style="margin-top:40px">RepoRaccoon server stopped. Run <b>reporaccoon -w</b> to start it again.</div></main>';
-}
 
 // ---- wiring ----
 document.querySelectorAll('th[data-key] button').forEach(b => b.addEventListener('click', () => {
@@ -973,7 +975,6 @@ $('scanBtn').addEventListener('click', startScan);
 $('stopBtn').addEventListener('click', stopScan);
 $('cacheBtn').addEventListener('click', () => loadCache(false));
 $('rescanBtn').addEventListener('click', rescanAll);
-$('quitBtn').addEventListener('click', quit);
 $('graph').addEventListener('click', e => { const d = e.target.closest('rect[data-day]'); if (d) selectDay(d.dataset.day); });
 for (const id of ['dayFilter', 'graphDay']) $(id).addEventListener('click', e => { if (e.target.closest('button')) selectDay(selectedDay); });
 $('topPeriod').addEventListener('click', e => { const b = e.target.closest('button[data-days]'); if (b) { topDays = +b.dataset.days; renderTopRepos(); } });
@@ -985,6 +986,15 @@ document.addEventListener('keydown', e => {
   if (e.key === '/' && !/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) { e.preventDefault(); $('search').focus(); }
 });
 $('search').addEventListener('keydown', e => { if (e.key === 'Escape' && $('search').value) { $('search').value = ''; render(); } });
+
+// Heartbeat: keeps the background server alive while this page is open (it stops
+// by itself a while after the last page closes). On return, say so if it has stopped.
+setInterval(() => { api('/api/ping').catch(() => { }); }, 60000);
+document.addEventListener('visibilitychange', async () => {
+  if (document.hidden) return;
+  try { await api('/api/ping'); }
+  catch { setState('failed', 'The RepoRaccoon server has stopped (no page was open for a while). Run reporaccoon -w to start it again.'); }
+});
 
 loadDrives();
 loadCache(true).then(resumeScan);

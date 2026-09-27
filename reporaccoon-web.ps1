@@ -9,7 +9,10 @@
 [CmdletBinding()]
 param(
     [int]$Port = 7717,
-    [switch]$NoBrowser
+    [switch]$NoBrowser,
+    # Stop by itself after this many minutes without any request from an open page
+    # (pages ping every minute). 0 = never. A running scan keeps the server alive.
+    [int]$IdleMinutes = 0
 )
 
 $ErrorActionPreference = 'Stop'
@@ -26,6 +29,7 @@ $known = New-Object 'System.Collections.Generic.HashSet[string]' ([StringCompare
 
 $scan = @{ Proc = $null; OutFile = $null; StartedAt = $null; Results = $null; Error = $null }
 $script:running = $true
+$script:lastSeen = Get-Date  # last request from a page (for -IdleMinutes)
 
 function ConvertTo-JsonString($obj) { ConvertTo-Json -InputObject $obj -Compress -Depth 5 }
 
@@ -155,6 +159,7 @@ function Invoke-Route($ctx) {
     $req = $ctx.Request
     $route = $req.Url.AbsolutePath.TrimEnd('/')
     $method = $req.HttpMethod
+    $script:lastSeen = Get-Date
 
     # '/raccoon' kept as an alias for old links to the (now default) raccoon page.
     if (($route -eq '' -or $route -eq '/raccoon') -and $method -eq 'GET') {
@@ -178,6 +183,10 @@ function Invoke-Route($ctx) {
     }
 
     switch ("$method $route") {
+        'GET /api/ping' {
+            # Heartbeat from open pages; also used by "reporaccoon -w" to see if the server is up.
+            Send-Response $ctx 200 (ConvertTo-JsonString @{ ok = $true; idleMinutes = $IdleMinutes })
+        }
         'GET /api/drives' {
             Send-Response $ctx 200 (ConvertTo-JsonString @(Get-Drives))
         }
@@ -235,14 +244,23 @@ catch {
 }
 
 Write-Host "RepoRaccoon web UI running at $prefix" -ForegroundColor Green
-Write-Host 'Press Ctrl+C (or "Stop server" in the page) to stop.' -ForegroundColor DarkGray
+Write-Host 'Press Ctrl+C (or close this window) to stop.' -ForegroundColor DarkGray
+if ($IdleMinutes -gt 0) { Write-Host "Stops by itself $IdleMinutes min after the last page is closed." -ForegroundColor DarkGray }
 if (-not $NoBrowser) { Start-Process $prefix }
 
 try {
     while ($script:running -and $listener.IsListening) {
         $task = $listener.GetContextAsync()
-        # Poll so Ctrl+C works and finished scans are picked up.
-        while (-not $task.AsyncWaitHandle.WaitOne(250)) { Update-ScanState }
+        # Poll so Ctrl+C works, finished scans are picked up and idle time is checked.
+        while (-not $task.AsyncWaitHandle.WaitOne(250)) {
+            Update-ScanState
+            if ($IdleMinutes -gt 0 -and -not $scan.Proc -and ((Get-Date) - $script:lastSeen).TotalMinutes -ge $IdleMinutes) {
+                Write-Host "No open page for $IdleMinutes min - stopping." -ForegroundColor DarkGray
+                $script:running = $false
+                break
+            }
+        }
+        if (-not $script:running) { break }
         $ctx = $task.GetAwaiter().GetResult()
         try { Invoke-Route $ctx }
         catch {

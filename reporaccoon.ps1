@@ -61,6 +61,13 @@ param(
 
     [int]$Port = 7717,
 
+    # With -w: run the web server in this window (visible log, no auto-stop) instead of hidden.
+    [Alias('fg')]
+    [switch]$Foreground,
+
+    # Stop the background web server.
+    [switch]$Stop,
+
     # Daily background scan (Windows Task Scheduler, current user only).
     [switch]$Install,
     [string]$At = '12:30',
@@ -113,8 +120,11 @@ OPTIONS
   -a                    Also scan AppData folders (skipped by default)
   -x <names>            Extra folder names to skip: -x build,dist
   -nested               Keep scanning inside repos (submodules)
-  -w                    Start web UI at http://localhost:7717 (Ctrl+C to stop)
-  -port <n>             Web UI port (with -w)
+  -w                    Open the web UI (http://localhost:7717); the server runs hidden
+                        and stops by itself 10 min after the last page is closed
+  -stop                 Stop the web UI server now
+  -fg                   With -w: run the server in this window instead (Ctrl+C to stop)
+  -port <n>             Web UI port (with -w / -stop)
   -install [-at 12:30]  Scan automatically every day (and 5 min after logon), hidden
   -uninstall            Remove the automatic daily scan
   -v                    Show version
@@ -344,12 +354,57 @@ function Uninstall-Schedule {
     }
 }
 
+# ---- web UI server (hidden background process) ----
+$WebIdleMinutes = 10
+
+function Test-WebUI {
+    $ProgressPreference = 'SilentlyContinue'
+    try {
+        $r = Invoke-WebRequest "http://localhost:$Port/api/ping" -Headers @{ 'X-RepoRaccoon' = '1' } -UseBasicParsing -TimeoutSec 2
+        return $r.StatusCode -eq 200
+    } catch { return $false }
+}
+
+function Start-WebUI {
+    $web = Join-Path $PSScriptRoot 'reporaccoon-web.ps1'
+    $url = "http://localhost:$Port/"
+    if ($Foreground) { & $web -Port $Port; return }  # old behaviour: visible, Ctrl+C to stop
+
+    if (Test-WebUI) {
+        Write-Host "RepoRaccoon is already running at $url" -ForegroundColor Green
+    } else {
+        Start-Process -FilePath 'powershell.exe' -WindowStyle Hidden -ArgumentList @(
+            '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$web`"",
+            '-Port', $Port, '-NoBrowser', '-IdleMinutes', $WebIdleMinutes)
+        $ok = $false
+        for ($i = 0; $i -lt 40 -and -not $ok; $i++) { Start-Sleep -Milliseconds 250; $ok = Test-WebUI }
+        if (-not $ok) {
+            Write-Warning "Could not start the web UI on port $Port (is the port in use?). Try: reporaccoon -w -port 7718   or see errors with: reporaccoon -w -fg"
+            return
+        }
+        Write-Host "RepoRaccoon is running in the background at $url" -ForegroundColor Green
+    }
+    Write-Host "It stops by itself $WebIdleMinutes min after you close the page. Stop now: reporaccoon -stop" -ForegroundColor DarkGray
+    Start-Process $url
+}
+
+function Stop-WebUI {
+    $ProgressPreference = 'SilentlyContinue'
+    try {
+        Invoke-WebRequest "http://localhost:$Port/api/quit" -Method Post -Headers @{ 'X-RepoRaccoon' = '1' } -UseBasicParsing -TimeoutSec 3 | Out-Null
+        Write-Host 'RepoRaccoon web UI stopped.' -ForegroundColor Green
+    } catch {
+        Write-Host "RepoRaccoon web UI is not running (port $Port)." -ForegroundColor DarkGray
+    }
+}
+
 # ---- main ----
 
 if ($Help) { Show-Help; return }
 if ($Version) { "$AppName $AppVersion"; return }
 if ($ListDrives) { Show-Drives; return }
-if ($Web) { & (Join-Path $PSScriptRoot 'reporaccoon-web.ps1') -Port $Port; return }
+if ($Web) { Start-WebUI; return }
+if ($Stop) { Stop-WebUI; return }
 if ($Install) { Install-Schedule; return }
 if ($Uninstall) { Uninstall-Schedule; return }
 if ($Background) {

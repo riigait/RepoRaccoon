@@ -92,7 +92,9 @@ reporaccoon -uninstall          :: remove it
 ## Web UI
 
 ```bat
-reporaccoon -w             :: start at http://localhost:7717 and open browser
+reporaccoon -w             :: open the web UI (server starts hidden in the background)
+reporaccoon -stop          :: stop the background server now
+reporaccoon -w -fg         :: run the server in this window instead (visible log, Ctrl+C to stop)
 reporaccoon -w -port 7718  :: other port
 ```
 
@@ -102,7 +104,9 @@ reporaccoon -w -port 7718  :: other port
 - Opens with the last full scan (cache). Live search + sortable columns. Warns when the cache is older than 1 day (**Rescan all**).
 - **Activity graph** (GitHub-style): commits made on this PC per day over the last year, pushed or not, read from each repo's local reflog (`.git/logs/HEAD`). Pulled/cloned commits are not counted. Click a day to show only repos active that day. Note: git may prune reflog entries older than ~90 days.
 - Per repo: **Code** (VS Code) plus a **⋯** menu — open folder (Explorer), open terminal here, copy path, copy remote URL. Remote links open on GitHub.
-- Stop: `Ctrl+C` in the terminal or **Stop server** on the page.
+- The server runs hidden (no terminal window). Closing the browser tab keeps it running; it **stops by itself 10 minutes after the last page is closed** (open pages send a small heartbeat every minute; a running scan also keeps it alive). Running `reporaccoon -w` again reuses a running server or starts a new one.
+- Stop it immediately with `reporaccoon -stop`. With `-fg`, stop with `Ctrl+C`.
+- Switch between the raccoon page and the classic page with the **Raccoon | Classic** switch at the top right.
 - Local only: listens on `localhost`, API accepts only requests from its own page, and open buttons only work on repo paths from scan results.
 
 Files: `reporaccoon-web.ps1` (server, built-in PowerShell `HttpListener`, no installs), `web/index.html` (page). The previous design is kept at `http://localhost:7717/classic` (`web/classic.html`).
