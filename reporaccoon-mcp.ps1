@@ -43,7 +43,7 @@ while ($null -ne ($line = [Console]::ReadLine())) {
             Send-Reply $request.id @{
                 protocolVersion = '2025-06-18'
                 capabilities = @{ tools = @{} }
-                serverInfo = @{ name = 'reporaccoon'; version = '1.0.0' }
+                serverInfo = @{ name = 'reporaccoon'; version = '1.1.0' }
             } $null
         }
         'ping' { Send-Reply $request.id @{} $null }

@@ -11,6 +11,7 @@ RepoRaccoon locates git repositories (folders containing `.git`) across every en
 - **macOS terminal** — zsh / bash
 - **Linux terminal** — Ubuntu (including WSL)
 - **Web / remote** — GitHub connection (list your remote repos) and other git hosts
+- **MCP server** — expose repo search to AI assistants (Claude, etc.) over stdio
 
 ## Goal
 
@@ -21,6 +22,7 @@ One tool to answer: *"Where are all my git repos, local and remote?"*
 - [x] Windows terminal (PowerShell 5.1 / 7, CMD, Windows Terminal)
 - [x] Local web UI (`reporaccoon -w`) — raccoon mascot, activity heatmap, most active repos, filters, pagination
 - [x] Automatic scanning (daily scheduled task + auto-scan when the web UI opens with old results)
+- [x] MCP server (`find_repositories` over stdio)
 - [ ] Windows app windows
 - [ ] macOS terminal
 - [ ] Linux / Ubuntu terminal
