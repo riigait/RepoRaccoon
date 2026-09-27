@@ -37,10 +37,31 @@ One tool to answer: *"Where are all my git repos, local and remote?"*
 
 ## Windows usage
 
-### Install (global command)
+### Install
 
-Add this folder to your user `PATH` (already done on this PC), then open a **new** terminal.
-`reporaccoon` then works from any folder in CMD, PowerShell and Windows Terminal.
+Requirements: Windows 10/11 or Windows Server 2016+, Windows PowerShell 5.1 (built in). No admin rights, no other installs.
+
+**One line** (PowerShell) — downloads the latest release:
+
+```powershell
+irm https://raw.githubusercontent.com/riigait/RepoRaccoon/main/install.ps1 | iex
+```
+
+**Or from the zip** — download `RepoRaccoon.zip` from [Releases](https://github.com/riigait/RepoRaccoon/releases/latest), extract it, then run:
+
+```bat
+powershell -ExecutionPolicy Bypass -File install.ps1
+```
+
+Both copy the files to `%LOCALAPPDATA%\Programs\RepoRaccoon` and add that folder to your user `PATH`. Open a **new** terminal and `reporaccoon` works from any folder in CMD, PowerShell and Windows Terminal. Run the installer again to update.
+
+If PowerShell's execution policy blocks scripts (`Restricted`), CMD still works; for PowerShell run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` or use `reporaccoon.cmd`.
+
+Uninstall (stops the web server, removes the daily scan task, the files and the `PATH` entry):
+
+```bat
+powershell -ExecutionPolicy Bypass -File "%LOCALAPPDATA%\Programs\RepoRaccoon\install.ps1" -Uninstall
+```
 
 ### Examples
 
@@ -117,7 +138,7 @@ Files: `reporaccoon-web.ps1` (server, built-in PowerShell `HttpListener`, no ins
 - Credentials in remote URLs are masked (`https://***@github.com/...`).
 - Skips: `Windows`, `$Recycle.Bin`, `System Volume Information`, `node_modules`, `.venv`, `venv`, `__pycache__`, `.cache`, `AppData`, symlinks/junctions.
 - Detects normal repos, worktrees and submodules (`.git` file).
-- Uninstall: remove the `RepoRaccoon` folder from user `PATH` (Settings → Environment Variables).
+- Uninstall: see [Install](#install).
 
 ## Icon
 
@@ -133,4 +154,14 @@ Uses headless Microsoft Edge to render each size — no extra installs.
 
 ## License
 
-[MIT](LICENSE) © 2026 riigait
+The RepoRaccoon source code is available under the [MIT License](LICENSE). You may use, copy, modify, and distribute the code under the terms of that license.
+
+## Name and branding
+
+“RepoRaccoon,” the RepoRaccoon logo, and related visual branding identify the official RepoRaccoon project and are not covered by the software license.
+
+You may refer to RepoRaccoon when describing this project or an unmodified copy. You may not use the RepoRaccoon name, logo, or branding to imply that a modified or independently distributed version is official, endorsed by, or affiliated with the RepoRaccoon project.
+
+Please use a different name and branding for modified versions, forks distributed as separate products, or projects based on this code. You may not use the RepoRaccoon logo or create confusingly similar branding without written permission from the project owner.
+
+This notice does not change the rights granted by the software license. It also does not grant permission to use third-party names, logos, or other assets included in the project.
