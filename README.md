@@ -152,6 +152,16 @@ powershell -ExecutionPolicy Bypass -File assets\build-icon.ps1
 
 Uses headless Microsoft Edge to render each size — no extra installs.
 
+## Contributing
+
+Contributors are welcome! Feel free to improve the app and make it more useful for everyone — bug fixes, new features, docs, and ideas all help.
+
+1. Open an [issue](https://github.com/riigait/RepoRaccoon/issues) to report a bug or suggest an idea.
+2. Fork the repo, make your change on a new branch, and test it on Windows PowerShell 5.1.
+3. Open a pull request with a short description of what changed and why.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+
 ## License
 
 The RepoRaccoon source code is available under the [MIT License](LICENSE). You may use, copy, modify, and distribute the code under the terms of that license.
