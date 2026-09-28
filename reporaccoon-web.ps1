@@ -117,6 +117,7 @@ function Start-Scan($body) {
     if ($depth -lt 0 -or $depth -gt 100) { throw 'Depth must be 0-100.' }
     if ($depth -gt 0) { $argsList += @('-m', [string]$depth) }
     if ($body.appdata -eq $true) { $argsList += '-a' }
+    if ($body.nested -eq $true) { $argsList += '-IncludeNested' }
 
     $out = [System.IO.Path]::Combine([System.IO.Path]::GetTempPath(), "reporaccoon-$([guid]::NewGuid().ToString('N')).json")
     $argsList += @('-o', $out)
