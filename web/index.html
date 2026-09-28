@@ -183,7 +183,7 @@
     display: grid; grid-template-columns: minmax(200px, 2fr) minmax(140px, 1fr) 120px auto; gap: 10px 14px; align-items: end;
   }
   fieldset.options legend { padding: 0 6px; font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
-  fieldset.options .check { min-height: 38px; }
+  fieldset.options .checks { display: flex; flex-direction: column; justify-content: center; gap: 4px; min-height: 38px; }
   .scan-status { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border); }
   .scan-status .msg { flex: 1 1 240px; min-width: 0; }
   .pill { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: var(--panel-2); color: var(--muted); white-space: nowrap; }
@@ -481,7 +481,10 @@
         <label class="field">Max depth <span class="sr-only">(0 means unlimited)</span>
           <input type="number" id="depth" min="0" max="100" value="0" title="0 = unlimited">
         </label>
-        <label class="check"><input type="checkbox" id="appdata"> Include AppData</label>
+        <div class="checks">
+          <label class="check"><input type="checkbox" id="appdata"> Include AppData</label>
+          <label class="check" title="Keep scanning inside found repos (submodules, repos inside repos)"><input type="checkbox" id="nested"> Include nested repos</label>
+        </div>
       </fieldset>
 
       <div class="scan-status">
@@ -1185,6 +1188,7 @@ async function startScan() {
     name: $('name').value.trim(),
     depth: parseInt($('depth').value, 10) || 0,
     appdata: $('appdata').checked,
+    nested: $('nested').checked,
   };
   try {
     await api('/api/scan', 'POST', body);
