@@ -123,10 +123,11 @@ The adapter implements [MCP stdio](https://modelcontextprotocol.io/specification
 with protocol version `2025-06-18`.
 
 Tool: `find_repositories`, requiring an absolute `path`, with optional `name`
-and `maxDepth` (1-10, default 3). For example, ask your assistant to find repositories
+and `maxDepth` (1-10, default 3), plus `includeNested` (boolean, default false). For example, ask your assistant to find repositories
 under `D:\vs` with depth 2. Results include names, branches and paths, without remote
 URLs or file contents. Scans reuse the existing finder, do not change repositories
-or refresh the cache, and stop descending when they find a repository.
+or refresh the cache, and stop descending when they find a repository unless
+`includeNested` is true. Nested scans still respect the depth limit and excluded folders.
 The local client can request any folder accessible to its Windows user.
 Scans run sequentially; cancellation does not interrupt a running scan.
 The release installer does not install this adapter; use its source checkout path.
@@ -154,6 +155,7 @@ reporaccoon -w -port 7718  :: other port
 
 - Live raccoon mascot: blinks, follows your mouse, digs while scanning, holds up its find when done, hides when a scan fails. Respects Windows "reduce motion".
 - Pick drives, folder, name, depth → **Scan**. **Stop** cancels a scan.
+- Enable **Include nested repositories** to scan inside repositories and discover submodules. The main table groups children beneath their nearest listed parent, with expand/collapse controls and the existing row actions. Sorting applies within each branch; pagination keeps each parent and its children together. Filters show matching repositories even when their parent is filtered out.
 - **Most active** panel beside the heatmap: top 5 repos for 30d / 90d / 1y (or the selected day); click one to filter the table.
 - Opens with the last full scan (cache). Live search + sortable columns. Warns when the cache is older than 1 day (**Rescan all**).
 - **Activity graph** (GitHub-style): commits made on this PC per day over the last year, pushed or not, read from each repo's local reflog (`.git/logs/HEAD`). Pulled/cloned commits are not counted. Click a day to show only repos active that day. Note: git may prune reflog entries older than ~90 days.
