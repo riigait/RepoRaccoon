@@ -1,3 +1,6 @@
 # scan exports
 *.json
 *.csv
+
+# Local assistant memory
+/.codex/memory.jsonl

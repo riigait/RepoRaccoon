@@ -285,8 +285,8 @@
   @supports not selector(::-webkit-scrollbar) { .table-wrap { scrollbar-width: thin; scrollbar-color: var(--border-2) var(--panel-2); } }
   /* Fixed columns + wrapping text: the table always fits its box (no sideways overflow). */
   table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-  thead th:nth-child(1) { width: 18%; } thead th:nth-child(2) { width: 13%; } thead th:nth-child(3) { width: 27%; }
-  thead th:nth-child(4) { width: 20%; } thead th:nth-child(5) { width: 13%; } thead th:nth-child(6) { width: 118px; }
+  thead th:nth-child(1) { width: 22%; } thead th:nth-child(2) { width: 11%; } thead th:nth-child(3) { width: 26%; }
+  thead th:nth-child(4) { width: 19%; } thead th:nth-child(5) { width: 13%; } thead th:nth-child(6) { width: 118px; }
   @media (max-width: 1000px) { table th, table td { padding-left: 8px; padding-right: 8px; } table thead th { letter-spacing: 0; } }
   thead th { overflow: hidden; text-overflow: ellipsis; }
   td { overflow-wrap: anywhere; }
@@ -303,6 +303,12 @@
   tbody.rise tr { animation: rise .45s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(min(var(--i), 24) * 28ms); }
   @keyframes rise { from { opacity: 0; transform: translateY(14px); } }
   .repo-cell { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+  .repo-tree { padding-left: calc(var(--tree-depth, 0) * 18px); flex-wrap: nowrap; }
+  .repo-tree > .name { min-width: 0; }
+  .repo-tree > .badge { flex: none; white-space: nowrap; }
+  .tree-toggle, .tree-leaf { width: 26px; flex: 0 0 26px; text-align: center; }
+  button.tree-toggle { min-height: 28px; padding: 0; color: var(--amber-ink); background: var(--amber-soft); border: 1px solid var(--border); border-radius: 6px; }
+  .tree-leaf { color: var(--muted); }
   .name { font-weight: 700; }
   tbody tr:focus-within .name::before {
     content: ""; display: inline-block; width: 12px; height: 12px; margin-right: 6px; vertical-align: -1px; background: var(--amber);
@@ -612,6 +618,7 @@
 const $ = (id) => document.getElementById(id);
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 let repos = [], view = [];
+const collapsedRepos = new Set();
 let sortKey = 'Name', sortDir = 1;
 let selectedDay = null, repoFilter = null, topDays = 365;
 let pollTimer = null, scanStart = 0;
@@ -999,6 +1006,23 @@ function goToPage(p) {
   if (head.getBoundingClientRect().top < 0) head.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' });
 }
 
+// Input is already sorted; keep that ordering among roots and siblings.
+function buildRepoTree(items) {
+  const keyOf = path => String(path || '').replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
+  const nodes = items.map(repo => ({ repo, key: keyOf(repo.Path), children: [] }));
+  const byPath = new Map(nodes.map(node => [node.key, node]));
+  const roots = [];
+  for (const node of nodes) {
+    let path = node.key, parent;
+    while (path.includes('/')) {
+      path = path.slice(0, path.lastIndexOf('/'));
+      if (byPath.has(path)) { parent = byPath.get(path); break; }
+    }
+    if (parent) parent.children.push(node); else roots.push(node);
+  }
+  return roots;
+}
+
 function render() {
   if (animateNext) dataVer++;
   const animate = animateNext && !reduceMotion;
@@ -1049,12 +1073,22 @@ function render() {
 
   // Back to page 1 whenever the filters, search, sort or data change.
   const sig = JSON.stringify([q, drive, branch, remote, days, dupOnly, selectedDay, repoFilter, sortKey, sortDir, dataVer, pageSize]);
-  if (sig !== lastSig) { page = 1; lastSig = sig; }
-  const pages = Math.max(1, Math.ceil(view.length / pageSize));
+  if (sig !== lastSig) { page = 1; lastSig = sig; collapsedRepos.clear(); }
+  const roots = buildRepoTree(view);
+  const treeMode = roots.length < view.length;
+  const pages = Math.max(1, Math.ceil(roots.length / pageSize));
   if (page > pages) page = pages;
   const from = (page - 1) * pageSize;
-  const pageRows = view.slice(from, from + pageSize);
-  renderPager(view.length, pages, from, pageRows.length);
+  const pageRoots = roots.slice(from, from + pageSize);
+  const indices = new Map(view.map((repo, i) => [repo, i]));
+  const pageRows = [];
+  const visit = (node, depth, parent) => {
+    pageRows.push({ node, depth, parent });
+    if (!collapsedRepos.has(node.key)) node.children.forEach(child => visit(child, depth + 1, node.repo.Name));
+  };
+  pageRoots.forEach(node => visit(node, 0, ''));
+  renderPager(roots.length, pages, from, pageRoots.length);
+  if (treeMode) $('pageInfo').textContent += ` groups · ${pageRows.length} visible repositories`;
 
   const tbody = $('rows');
   tbody.classList.toggle('rise', animate);
@@ -1062,8 +1096,13 @@ function render() {
     tbody.innerHTML = `<tr><td colspan="6" class="empty"><img src="/icon.svg" width="56" height="56" alt="">${repos.length ? 'Nothing in the bin matches these filters.' : 'No repos yet — press Scan and the raccoon will go digging.'}</td></tr>`;
     return;
   }
-  tbody.innerHTML = pageRows.map((r, j) => {
-    const i = from + j;  // index into view (used by row actions)
+  tbody.innerHTML = pageRows.map(({ node, depth, parent }, j) => {
+    const r = node.repo;
+    const i = indices.get(r);  // index into filtered view (used by row actions)
+    const expanded = !collapsedRepos.has(node.key);
+    const treeControl = node.children.length
+      ? `<button class="tree-toggle" data-tree="${i}" aria-expanded="${expanded}" aria-label="${expanded ? 'Collapse' : 'Expand'} nested repositories in ${esc(r.Name)}">${expanded ? '−' : '+'}</button>`
+      : treeMode ? `<span class="tree-leaf" aria-hidden="true">${depth ? '└' : ''}</span>` : '';
     const url = webUrl(r.Remote);
     const copies = groups.get(dupKey(r));
     const dup = copies.length > 1
@@ -1076,7 +1115,7 @@ function render() {
       : '<span class="sub">local only</span>';
     const mod = parseLocal(r.Modified);
     return `<tr data-i="${i}" style="--i:${j}">
-      <td data-label="Repository"><div class="repo-cell"><span class="name">${esc(r.Name)}</span>${dup}${commits}</div></td>
+      <td data-label="Repository"><div class="repo-cell repo-tree" style="--tree-depth:${depth}">${treeControl}<span class="name"${parent ? ` title="Nested in ${esc(parent)}"` : ''}>${esc(r.Name)}</span>${parent ? `<span class="sr-only">Nested in ${esc(parent)}</span>` : ''}${dup}${commits}</div></td>
       <td data-label="Branch">${r.Branch ? `<span class="branch">${esc(r.Branch)}</span>` : '<span class="sub">—</span>'}</td>
       <td data-label="Location"><span class="clip mono" title="${esc(r.Path)}">${wrapSep(r.Path)}</span></td>
       <td data-label="Remote">${remoteHtml}</td>
@@ -1169,6 +1208,14 @@ $('rows').addEventListener('click', e => {
   const tr = e.target.closest('tr[data-i]');
   if (!tr) return;
   const r = view[+tr.dataset.i];
+  const tree = e.target.closest('button[data-tree]');
+  if (tree) {
+    const key = String(r.Path).replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
+    if (collapsedRepos.has(key)) collapsedRepos.delete(key); else collapsedRepos.add(key);
+    render();
+    $('rows').querySelector(`button[data-tree="${tree.dataset.tree}"]`)?.focus();
+    return;
+  }
   const app = e.target.closest('button[data-app]');
   if (app) { doAction(app.dataset.app, r); return; }
   const more = e.target.closest('button.more');
