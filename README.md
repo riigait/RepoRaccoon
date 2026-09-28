@@ -23,6 +23,7 @@ One tool to answer: *"Where are all my git repos, local and remote?"*
 - [x] Local web UI (`reporaccoon -w`) — raccoon mascot, activity heatmap, most active repos, filters, pagination
 - [x] Automatic scanning (daily scheduled task + auto-scan when the web UI opens with old results)
 - [x] MCP server (`find_repositories` over stdio)
+- [x] Nested repositories (submodules, repos inside repos) — CLI `-nested`, web UI tree view, MCP `includeNested`
 - [ ] Windows app windows
 - [ ] macOS terminal
 - [ ] Linux / Ubuntu terminal
@@ -36,6 +37,12 @@ One tool to answer: *"Where are all my git repos, local and remote?"*
    - [x] Daily auto scan (`reporaccoon -install`)
 4. [ ] Extras — git status column (uncommitted / unpushed), last commit date, export button in web UI
    - [x] Duplicate clones (copies badge + filter)
+
+## Changelog
+
+- **1.1.1** — Nested repositories: **Include nested repos** option in the web UI with an expandable tree table, `includeNested` option for the MCP server.
+- **1.1.0** — MCP server for AI assistants.
+- **1.0.0** — First release with one-line installer.
 
 ## Windows usage
 
@@ -155,7 +162,7 @@ reporaccoon -w -port 7718  :: other port
 
 - Live raccoon mascot: blinks, follows your mouse, digs while scanning, holds up its find when done, hides when a scan fails. Respects Windows "reduce motion".
 - Pick drives, folder, name, depth → **Scan**. **Stop** cancels a scan.
-- Enable **Include nested repositories** to scan inside repositories and discover submodules. The main table groups children beneath their nearest listed parent, with expand/collapse controls and the existing row actions. Sorting applies within each branch; pagination keeps each parent and its children together. Filters show matching repositories even when their parent is filtered out.
+- Enable **Include nested repos** to scan inside repositories and discover submodules. The main table groups children beneath their nearest listed parent, with expand/collapse controls and the existing row actions. Sorting applies within each branch; pagination keeps each parent and its children together. Filters show matching repositories even when their parent is filtered out.
 - **Most active** panel beside the heatmap: top 5 repos for 30d / 90d / 1y (or the selected day); click one to filter the table.
 - Opens with the last full scan (cache). Live search + sortable columns. Warns when the cache is older than 1 day (**Rescan all**).
 - **Activity graph** (GitHub-style): commits made on this PC per day over the last year, pushed or not, read from each repo's local reflog (`.git/logs/HEAD`). Pulled/cloned commits are not counted. Click a day to show only repos active that day. Note: git may prune reflog entries older than ~90 days.

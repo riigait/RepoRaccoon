@@ -84,7 +84,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $AppName = 'RepoRaccoon'
-$AppVersion = '1.1.0'
+$AppVersion = '1.1.1'
 $CacheFile = Join-Path $env:LOCALAPPDATA 'RepoRaccoon\cache.json'
 $LogFile = Join-Path $env:LOCALAPPDATA 'RepoRaccoon\background.log'
 $TaskName = 'RepoRaccoon daily scan'
